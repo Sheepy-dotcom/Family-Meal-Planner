@@ -113,7 +113,7 @@ for (const ingredient of INGREDIENTS) {
     RECIPES.flatMap((r) =>
       r.ingredients
         .filter((ri) => ri.ingredientId === ingredient.id)
-        .map((ri) => toBase({ amount: 1, unit: ri.unit }, ingredient.gramsPerUnit).unit),
+        .map((ri) => toBase({ amount: 1, unit: ri.unit }).unit),
     ),
   );
   if (usedUnits.size === 0) continue;
