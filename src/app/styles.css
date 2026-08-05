@@ -437,6 +437,13 @@ select:focus-visible {
   margin: calc(var(--step) * 0.5) 0 0;
 }
 
+/* Headcount at the table, on every meal. Sits quietly with the other meta when
+   the whole household is in, and lifts to an amber flag when it isn't. */
+.meal__eating--some {
+  color: var(--warn);
+  font-weight: 700;
+}
+
 .badge {
   display: inline-block;
   font-family: var(--data);

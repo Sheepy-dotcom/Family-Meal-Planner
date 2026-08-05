@@ -107,6 +107,11 @@ function Meal({
   const attendees = attendeesFor(household, meal.day, meal.slot);
   const kidsOnly = attendees.length > 0 && !attendees.some((p) => p.ageBand === 'adult');
   const carried = meal.source === 'planned-over';
+  // Headcount at the table, shown on every meal. Distinct from portions, which
+  // is age-weighted (a child counts less than a whole one). Highlighted when
+  // it's short of the full household, since that's what explains a small cook.
+  const eating = attendees.length;
+  const everyoneIn = eating === household.people.length;
 
   return (
     <div className={`meal meal--${meal.slot}${carried ? ' meal--carried' : ''}`}>
@@ -127,12 +132,12 @@ function Meal({
             <span>{recipe.activeMinutes} min hands-on</span>
           )}
           <span>{meal.portions} portions</span>
+          <span className={`meal__eating${everyoneIn ? '' : ' meal__eating--some'}`}>
+            {eating} eating
+          </span>
           <span>{recipe.cuisine}</span>
           {recipe.isNew && <span className="badge badge--new">New</span>}
           {kidsOnly && <span className="badge badge--kids">Kids cooking</span>}
-          {attendees.length < household.people.length && !kidsOnly && (
-            <span className="badge badge--away">{attendees.length} eating</span>
-          )}
         </div>
       </div>
       <div className="actions">
