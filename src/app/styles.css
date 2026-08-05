@@ -1862,7 +1862,7 @@ select {
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   background: color-mix(in srgb, var(--surface-2) 88%, transparent);
   -webkit-backdrop-filter: saturate(1.4) blur(12px);
   backdrop-filter: saturate(1.4) blur(12px);
@@ -1928,6 +1928,15 @@ select {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Six tabs get tight on a small phone; ease the label so nothing clips. */
+@media (max-width: 400px) {
+  .tabbar__label {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
 }
 
 .tabbar__tab--on .tabbar__label {
@@ -1979,4 +1988,125 @@ select {
 
 .page .sheet__head {
   display: none;
+}
+
+/* --- today --------------------------------------------------------------- */
+/* Tonight's dinner leads as a full card; the lighter meals and the
+   "do tonight for tomorrow" note sit beneath it. */
+
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--step) * 6);
+}
+
+.today__hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: calc(var(--step) * 6);
+  box-shadow: var(--shadow-md);
+}
+
+.today__hero--carried {
+  border-left-style: dashed;
+  border-left-color: var(--ok);
+}
+
+.today__eyebrow {
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 calc(var(--step) * 2);
+}
+
+.today__dish {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(26px, 5vw, 40px);
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  margin: 0;
+}
+
+.today__facts {
+  font-family: var(--data);
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(var(--step) * 2);
+  margin: calc(var(--step) * 3) 0 calc(var(--step) * 5);
+}
+
+.today__cook {
+  font-size: 15px;
+  padding: calc(var(--step) * 3) calc(var(--step) * 6);
+}
+
+.today__coming {
+  border-left: 3px solid var(--warn);
+  background: var(--warn-soft);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: calc(var(--step) * 3) calc(var(--step) * 4);
+}
+
+.today__coming-head {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--warn);
+  margin: 0 0 calc(var(--step) * 1.5);
+}
+
+.today__coming ul {
+  margin: 0;
+  padding-left: calc(var(--step) * 4);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.today__coming li + li {
+  margin-top: calc(var(--step) * 1);
+}
+
+.today__meal {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  gap: calc(var(--step) * 3);
+  align-items: center;
+  padding: calc(var(--step) * 2.5) 0;
+  border-top: 1px solid var(--border);
+}
+
+.today__slot {
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.today__meal-name {
+  margin: 0;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.today__meal-meta {
+  margin: 2px 0 0;
+  font-family: var(--data);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 560px) {
+  .today__meal {
+    grid-template-columns: 60px minmax(0, 1fr) auto;
+  }
 }

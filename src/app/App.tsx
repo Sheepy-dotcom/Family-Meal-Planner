@@ -51,6 +51,7 @@ import { weightsForLean } from '../core/onboarding/questions.js';
 import { DEFAULT_WEIGHTS } from '../core/rules/config.js';
 import { SEED_HOUSEHOLD } from '../core/data/household.js';
 import { WeekBoard } from './components/WeekBoard.js';
+import { Today } from './components/Today.js';
 import { RuleRail } from './components/RuleRail.js';
 import { ShoppingPanel } from './components/ShoppingPanel.js';
 import { SwapSheet } from './components/SwapSheet.js';
@@ -72,7 +73,8 @@ export default function App() {
   const undoStack = useRef(new UndoStack());
   const [undoLabel, setUndoLabel] = useState<string | null>(null);
   const [reading, setReading] = useState<PlannedMeal | null>(null);
-  const [tab, setTab] = useState<Tab>('week');
+  // Opens on Today: most sessions are "what's for tonight", not a replan.
+  const [tab, setTab] = useState<Tab>('today');
   // Rolled to the current week on load, which wipes last week's ticks. Carrying
   // them forward is what makes inventory tracking go stale.
   const [pantry, setPantry] = useState(() => loadPantry());
@@ -405,9 +407,9 @@ export default function App() {
     if (reading) return setReading(null), true;
     if (swapping) return setSwapping(null), true;
     if (reviewing) return setReviewing(false), true;
-    // From any other tab, back returns to the week rather than leaving — the
-    // same behaviour as a native app's root tab.
-    if (tab !== 'week') return setTab('week'), true;
+    // From any other tab, back returns to Today rather than leaving — the same
+    // behaviour as a native app's root tab.
+    if (tab !== 'today') return setTab('today'), true;
     return false;
   }, [reading, swapping, reviewing, tab]);
 
@@ -523,6 +525,15 @@ export default function App() {
           </ul>
           <p>Open Settings to relax a rule, or add recipes that fit.</p>
         </div>
+      )}
+
+      {tab === 'today' && (
+        <Today
+          plan={result?.plan ?? null}
+          household={household}
+          onCook={setReading}
+          onGoToWeek={() => setTab('week')}
+        />
       )}
 
       {tab === 'week' &&
@@ -669,6 +680,7 @@ export default function App() {
 }
 
 const TAB_TITLES: Record<Tab, (week: string) => string> = {
+  today: () => 'Today',
   week: (week) => `Week of ${week}`,
   shop: () => 'Shopping list',
   people: () => 'Who eats what',
