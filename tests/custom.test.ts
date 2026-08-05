@@ -17,6 +17,7 @@ import {
 import { isAllowed } from '../src/core/rules/hard.js';
 import { evaluateSoftRules } from '../src/core/rules/soft.js';
 import { checkFeasibility } from '../src/core/planner/feasibility.js';
+import { reconcilePlan } from '../src/core/planner/reconcile.js';
 import { explainMeal } from '../src/core/planner/explain.js';
 import { previewImpact } from '../src/core/planner/rulePreview.js';
 import { generatePlan } from '../src/core/planner/solver.js';
@@ -188,6 +189,19 @@ console.log('\nCustom household rules');
   const greedy: PersonProteinRule = { id: 'jack-lots', kind: 'person-protein', enforcement: 'soft', personId: 'p-jack', proteins: ['red-meat'], minPerWeek: 30 };
   const impact = previewImpact(greedy, ctxWith([]));
   check('an unreachable minimum is flagged', impact.details.some((d) => d.includes("can't be met")), JSON.stringify(impact.details));
+}
+
+// --- reconcile catches meals broken by a custom rule --------------------
+{
+  // A plan carrying a fish dinner, then a hard "no fish at dinner" rule added.
+  const rule: AvoidRule = { id: 'no-fish', kind: 'avoid', enforcement: 'hard', proteins: ['fish', 'shellfish'], days: [], slots: ['dinner'] };
+  const plan = planOf([meal(0, 'dinner', 'salmon-traybake')]);
+  const broken = reconcilePlan(plan, ctxWith([rule])).broken;
+  check('reconcile flags a meal a custom rule now forbids', broken.some((v) => v.ruleId === 'custom:no-fish'), JSON.stringify(broken));
+
+  // Without the rule, the same plan reconciles clean.
+  const clean = reconcilePlan(plan, ctxWith([])).broken;
+  check('and does not invent breakages when there is no such rule', !clean.some((v) => v.ruleId.startsWith('custom:')));
 }
 
 // --- descriptions read plainly ------------------------------------------

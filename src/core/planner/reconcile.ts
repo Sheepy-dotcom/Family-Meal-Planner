@@ -1,7 +1,7 @@
 import { getRecipe } from '../data/registry.js';
 import { DAY_NAMES, attendeesFor, portionsFor } from '../rules/context.js';
 import type { RuleContext } from '../rules/context.js';
-import { HARD_RULES } from '../rules/hard.js';
+import { findViolations } from '../rules/hard.js';
 import type { MealPlan, PlannedMeal, RuleViolation } from '../types.js';
 import { reroll } from './solver.js';
 
@@ -79,35 +79,9 @@ export function reconcilePlan(plan: MealPlan, ctx: RuleContext): ReconcileResult
   );
 
   const next: MealPlan = { ...plan, meals: kept };
-  return { plan: next, reportioned, broken: findBreakages(kept, ctx), emptied };
-}
-
-/**
- * Hard-rule failures only, described in terms the household will recognise.
- * Planned-overs are checked against the reduced rule set, same as everywhere.
- */
-function findBreakages(meals: PlannedMeal[], ctx: RuleContext): RuleViolation[] {
-  const out: RuleViolation[] = [];
-  for (const meal of meals) {
-    const recipe = getRecipe(meal.recipeId);
-    const others = meals.filter((m) => m !== meal);
-    const applicable =
-      meal.source === 'planned-over'
-        ? HARD_RULES.filter((r) => r.appliesToPlannedOvers !== false)
-        : HARD_RULES;
-
-    for (const rule of applicable) {
-      if (!rule.allows(recipe, meal.day, meal.slot, ctx, others)) {
-        out.push({
-          ruleId: rule.id,
-          message: rule.explain(recipe, meal.day, meal.slot, ctx),
-          day: meal.day,
-          slot: meal.slot,
-        });
-      }
-    }
-  }
-  return out;
+  // findViolations reads through hardRulesFor, so a meal broken by a household's
+  // own rule is caught here just like one broken by a built-in.
+  return { plan: next, reportioned, broken: findViolations(kept, ctx), emptied };
 }
 
 export interface RepairResult {
@@ -147,7 +121,7 @@ export function repairPlan(
       (m) => m.day === slot.day && m.slot === slot.slot,
     );
 
-    const stillBroken = findBreakages(attempt.plan.meals, ctx).some(
+    const stillBroken = findViolations(attempt.plan.meals, ctx).some(
       (v) => v.day === slot.day && v.slot === slot.slot,
     );
 

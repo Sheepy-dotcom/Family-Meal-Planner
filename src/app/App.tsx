@@ -280,12 +280,38 @@ export default function App() {
     [result, ctx],
   );
 
+  /**
+   * Any settings change — a person, a time budget, an added rule — is
+   * reconciled against the current plan the same way a swap or an attendance
+   * toggle is. Portions and attendance are corrected, a meal a new rule has
+   * broken is surfaced rather than left silently illegal, and the evaluation is
+   * always recomputed so the rule rail reflects the change instead of lagging a
+   * plan behind. The plan is only re-saved when it actually moved.
+   */
   const changeHousehold = useCallback(
     (next: typeof household) => {
       setHousehold(next);
       saveHousehold(next);
+      if (!result) return;
+
+      const nextCtx = { household: next, history };
+      const reconciled = reconcilePlan(result.plan, nextCtx);
+      const planChanged =
+        reconciled.plan.meals.length !== result.plan.meals.length ||
+        reconciled.plan.meals.some((m, i) => m !== result.plan.meals[i]);
+      const plan = planChanged ? reconciled.plan : result.plan;
+
+      setResult({
+        plan,
+        evaluation: evaluatePlan(plan.meals, nextCtx),
+        unfilled: result.unfilled,
+      });
+      if (planChanged) savePlan(plan);
+      setPendingFix(
+        reconciled.broken.length > 0 || reconciled.emptied.length > 0 ? reconciled : null,
+      );
     },
-    [],
+    [result, history],
   );
 
   /**
