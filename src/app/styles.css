@@ -1914,7 +1914,7 @@ select {
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: color-mix(in srgb, var(--surface-2) 88%, transparent);
   -webkit-backdrop-filter: saturate(1.4) blur(12px);
   backdrop-filter: saturate(1.4) blur(12px);
@@ -2017,6 +2017,49 @@ select {
 /* The page must not end underneath the bar. */
 .shell {
   padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+/* --- meals segmented control --------------------------------------------- */
+/* Switches the Meals tab between Today and Week. Pill segments, each a
+   comfortable thumb target even on a 320px phone. */
+
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  margin: calc(var(--step) * 6) 0 calc(var(--step) * 2);
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.seg__btn {
+  min-width: 96px;
+  min-height: 44px;
+  padding: calc(var(--step) * 2) calc(var(--step) * 5);
+  border: none;
+  background: none;
+  border-radius: 999px;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+
+.seg__btn--on {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (hover: hover) {
+  .seg__btn:not(.seg__btn--on):hover {
+    color: var(--text);
+  }
 }
 
 /* --- tab pages ----------------------------------------------------------- */

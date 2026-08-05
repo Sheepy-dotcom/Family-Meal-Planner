@@ -1,4 +1,4 @@
-export type Tab = 'today' | 'week' | 'shop' | 'people' | 'recipes' | 'settings';
+export type Tab = 'meals' | 'shop' | 'people' | 'recipes' | 'settings';
 
 /**
  * Bottom navigation.
@@ -9,12 +9,12 @@ export type Tab = 'today' | 'week' | 'shop' | 'people' | 'recipes' | 'settings';
  * visible without exploring — which is what "where is the profile section?"
  * turned out to be about.
  *
- * Today leads: on most opens the question is "what's for tonight", not "is the
- * week sound", so it's both the first tab and the default view.
+ * Five, not six: Today and Week are two views of the same thing, so they share
+ * one "Meals" tab with a segmented control. A sixth tab truncated its label and
+ * narrowed every target below a comfortable thumb on a small phone.
  */
 const TABS: Array<{ id: Tab; label: string; icon: string; needsPlan?: boolean }> = [
-  { id: 'today', label: 'Today', icon: '◉' },
-  { id: 'week', label: 'Week', icon: '▤' },
+  { id: 'meals', label: 'Meals', icon: '▤' },
   { id: 'shop', label: 'Shop', icon: '▦', needsPlan: true },
   { id: 'people', label: 'People', icon: '◍', needsPlan: true },
   { id: 'recipes', label: 'Recipes', icon: '✎' },
