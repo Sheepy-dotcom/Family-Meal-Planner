@@ -56,6 +56,7 @@ import { RuleRail } from './components/RuleRail.js';
 import { ShoppingPanel } from './components/ShoppingPanel.js';
 import { SwapSheet } from './components/SwapSheet.js';
 import { HouseholdEditor } from './components/HouseholdEditor.js';
+import { RulesEditor } from './components/RulesEditor.js';
 import { checkFeasibility } from '../core/planner/feasibility.js';
 
 export default function App() {
@@ -618,13 +619,16 @@ export default function App() {
       )}
 
       {tab === 'settings' && (
-        <HouseholdEditor
-          variant="page"
-          household={household}
-          ctx={ctx}
-          onChange={changeHousehold}
-          onClose={() => setTab('week')}
-        />
+        <>
+          <RulesEditor household={household} ctx={ctx} onChange={changeHousehold} />
+          <HouseholdEditor
+            variant="page"
+            household={household}
+            ctx={ctx}
+            onChange={changeHousehold}
+            onClose={() => setTab('week')}
+          />
+        </>
       )}
 
 

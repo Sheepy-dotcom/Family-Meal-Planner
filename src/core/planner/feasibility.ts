@@ -1,6 +1,6 @@
 import { allRecipes } from '../data/registry.js';
 import { DAYS, DAY_NAMES, attendeesFor, type RuleContext } from '../rules/context.js';
-import { HARD_RULES } from '../rules/hard.js';
+import { hardRulesFor } from '../rules/hard.js';
 import type { DayIndex, MealSlot, Recipe } from '../types.js';
 
 /**
@@ -50,11 +50,10 @@ function analyseSlot(
   slot: MealSlot,
   ctx: RuleContext,
 ): SlotFeasibility {
+  const rules = hardRulesFor(ctx);
   const forSlot = allRecipes().filter((r) => r.slots.includes(slot));
   const passes = (recipe: Recipe, skipRuleId?: string) =>
-    HARD_RULES.every(
-      (rule) => rule.id === skipRuleId || rule.allows(recipe, day, slot, ctx),
-    );
+    rules.every((rule) => rule.id === skipRuleId || rule.allows(recipe, day, slot, ctx));
 
   const eligible = forSlot.filter((r) => passes(r)).length;
 
@@ -63,7 +62,7 @@ function analyseSlot(
   let bestGain = 0;
 
   if (eligible < forSlot.length) {
-    for (const rule of HARD_RULES) {
+    for (const rule of rules) {
       if (rule.id === 'slot-fit' || rule.id === 'repeat-limit') continue;
       const withoutRule = forSlot.filter((r) => passes(r, rule.id)).length;
       const gain = withoutRule - eligible;
@@ -125,11 +124,12 @@ export function checkVariety(ctx: RuleContext): string[] {
     );
     if (days.length === 0) continue;
 
+    const rules = hardRulesFor(ctx);
     const usable = new Set<string>();
     for (const day of days) {
       for (const recipe of allRecipes()) {
         if (!recipe.slots.includes(slot)) continue;
-        if (HARD_RULES.every((rule) => rule.allows(recipe, day, slot, ctx))) {
+        if (rules.every((rule) => rule.allows(recipe, day, slot, ctx))) {
           usable.add(recipe.id);
         }
       }

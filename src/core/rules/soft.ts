@@ -11,6 +11,7 @@ import {
   type RuleContext,
 } from './context.js';
 import { DEFAULT_TARGETS, DEFAULT_WEIGHTS, type PlannerTargets } from './config.js';
+import { compileSoftRules } from './custom.js';
 
 /**
  * Soft rules score a whole plan from 0 to 1. The solver maximises the weighted
@@ -20,6 +21,12 @@ import { DEFAULT_TARGETS, DEFAULT_WEIGHTS, type PlannerTargets } from './config.
 export interface SoftRule {
   id: string;
   label: string;
+  /**
+   * Default weight, used when the weights map has no entry for this rule.
+   * Built-in rules leave this unset (they're weighted via DEFAULT_WEIGHTS);
+   * compiled custom rules carry the weight the household chose.
+   */
+  weight?: number;
   evaluate(
     meals: PlannedMeal[],
     ctx: RuleContext,
@@ -417,18 +424,29 @@ export const SOFT_RULES: SoftRule[] = [
   respectDislikes,
 ];
 
+/**
+ * The soft rules in force for a context: the built-ins plus the household's
+ * own. Mirrors hardRulesFor, so evaluatePlan and the solver score custom rules
+ * with no special casing.
+ */
+export function softRulesFor(ctx: RuleContext): SoftRule[] {
+  const custom = ctx.household.customRules;
+  if (!custom || custom.length === 0) return SOFT_RULES;
+  return [...SOFT_RULES, ...compileSoftRules(custom)];
+}
+
 export function evaluateSoftRules(
   meals: PlannedMeal[],
   ctx: RuleContext,
   targets: PlannerTargets = DEFAULT_TARGETS,
   weights: Record<string, number> = DEFAULT_WEIGHTS,
 ): SoftRuleResult[] {
-  return SOFT_RULES.map((rule) => {
+  return softRulesFor(ctx).map((rule) => {
     const outcome = rule.evaluate(meals, ctx, targets);
     return {
       ruleId: rule.id,
       label: rule.label,
-      weight: weights[rule.id] ?? 1,
+      weight: weights[rule.id] ?? rule.weight ?? 1,
       ...outcome,
     };
   });

@@ -7,7 +7,7 @@ import {
   type RuleContext,
 } from '../rules/context.js';
 import { DEFAULT_TARGETS, DEFAULT_WEIGHTS, type PlannerTargets } from '../rules/config.js';
-import { HARD_RULES, isAllowed } from '../rules/hard.js';
+import { hardRulesFor, isAllowed } from '../rules/hard.js';
 import { evaluatePlan } from '../rules/index.js';
 import type {
   DayIndex,
@@ -350,9 +350,9 @@ export function explainRejection(
   ctx: RuleContext,
 ): string[] {
   const recipe = getRecipe(recipeId);
-  return HARD_RULES.filter((rule) => !rule.allows(recipe, ref.day, ref.slot, ctx)).map(
-    (rule) => rule.explain(recipe, ref.day, ref.slot, ctx),
-  );
+  return hardRulesFor(ctx)
+    .filter((rule) => !rule.allows(recipe, ref.day, ref.slot, ctx))
+    .map((rule) => rule.explain(recipe, ref.day, ref.slot, ctx));
 }
 
 const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];

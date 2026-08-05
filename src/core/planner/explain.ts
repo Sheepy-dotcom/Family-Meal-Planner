@@ -16,7 +16,7 @@
 import { allRecipes, getRecipe } from '../data/registry.js';
 import { DAY_NAMES, allergensIn, attendeesFor } from '../rules/context.js';
 import type { RuleContext } from '../rules/context.js';
-import { HARD_RULES } from '../rules/hard.js';
+import { hardRulesFor } from '../rules/hard.js';
 import type {
   DayIndex,
   MealPlan,
@@ -75,14 +75,15 @@ export function explainMeal(
     };
   }
 
+  const rules = hardRulesFor(ctx);
   const forSlot = allRecipes().filter((r) => r.slots.includes(slot));
   const total = forSlot.length;
   const passes = (r: Recipe, skip?: string) =>
-    HARD_RULES.every((rule) => rule.id === skip || rule.allows(r, day, slot, ctx));
+    rules.every((rule) => rule.id === skip || rule.allows(r, day, slot, ctx));
   const eligible = forSlot.filter((r) => passes(r)).length;
 
   const binding: BindingRule[] = [];
-  for (const rule of HARD_RULES) {
+  for (const rule of rules) {
     if (SKIP.has(rule.id)) continue;
     const without = forSlot.filter((r) => passes(r, rule.id)).length;
     const removed = without - eligible;
@@ -99,6 +100,13 @@ export function explainMeal(
   const props: string[] = [];
   for (const b of binding) {
     if (clauses.length >= 2) break;
+    // Custom rules describe themselves through the constraintClause they were
+    // compiled with — no built-in phrasing table, no special casing.
+    if (b.ruleId.startsWith('custom:')) {
+      const clause = rules.find((r) => r.id === b.ruleId)?.constraintClause?.(day, slot, ctx);
+      if (clause) clauses.push(clause);
+      continue;
+    }
     const phrase = phraseFor(b.ruleId, day, slot, forSlot, ctx);
     if (!phrase) continue;
     clauses.push(phrase.clause);
