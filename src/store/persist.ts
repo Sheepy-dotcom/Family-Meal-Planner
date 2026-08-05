@@ -27,6 +27,7 @@ const KEYS = {
   weights: 'mp.weights.v1',
   recipes: 'mp.recipes.v1',
   pantry: 'mp.pantry.v1',
+  session: 'mp.session.v1',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -141,6 +142,23 @@ export function loadPantry(): Pantry {
 
 export function savePantry(pantry: Pantry): void {
   write(KEYS.pantry, pantry);
+}
+
+/**
+ * A stable, opaque id for this install, minted once and kept.
+ *
+ * It carries no personal data — it exists only so the pattern-reader endpoint
+ * can rate-limit one household without us sending anything that identifies them.
+ */
+export function loadSessionId(): string {
+  const existing = read<string | null>(KEYS.session, null);
+  if (existing) return existing;
+  const id =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `s-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+  write(KEYS.session, id);
+  return id;
 }
 
 export function clearAll(): void {

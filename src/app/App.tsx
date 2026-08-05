@@ -26,8 +26,11 @@ import {
   saveUserRecipes,
   loadPantry,
   savePantry,
+  loadSessionId,
 } from '../store/persist.js';
 import { proposeRules, applyProposal, favouritesFor, dishVerdicts } from '../core/learning/feedback.js';
+import type { RuleProposal } from '../core/learning/feedback.js';
+import { analysePatterns } from '../core/learning/ai.js';
 import { suggestPlannedOvers, applyPlannedOver } from '../core/planner/leftovers.js';
 import { reconcilePlan, repairPlan } from '../core/planner/reconcile.js';
 import { dropOrphanedMeals, mealsUsing } from '../core/planner/integrity.js';
@@ -66,6 +69,12 @@ export default function App() {
   const [swapping, setSwapping] = useState<{ day: DayIndex; slot: MealSlot } | null>(null);
   const [feedback, setFeedback] = useState(loadFeedback);
   const [dismissed, setDismissed] = useState(loadDismissed);
+  // Patterns the model has surfaced this session. They merge into the same
+  // suggestions list as the inferred ones and apply only when accepted.
+  const [aiProposals, setAiProposals] = useState<RuleProposal[]>([]);
+  const [analysing, setAnalysing] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string | null>(null);
+  const sessionId = useMemo(() => loadSessionId(), []);
   const [retailer, setRetailer] = useState(loadRetailer);
   const [onboarded, setOnboarded] = useState(hasHousehold);
   const [reviewing, setReviewing] = useState(false);
@@ -180,6 +189,8 @@ export default function App() {
             recipeId,
             at: new Date().toISOString(),
             attendeeIds: attendeesFor(household, day, slot).map((p) => p.id),
+            day,
+            slot,
           },
         ]),
       );
@@ -193,10 +204,17 @@ export default function App() {
    * strongest signal the learning engine has: a stated fact, not an inference.
    */
   const rateMeal = useCallback(
-    (recipeId: string, personId: string, verdict: 'liked' | 'disliked', attendeeIds: string[]) => {
+    (
+      recipeId: string,
+      personId: string,
+      verdict: 'liked' | 'disliked',
+      attendeeIds: string[],
+      day?: DayIndex,
+      slot?: MealSlot,
+    ) => {
       setFeedback(
         recordFeedback([
-          { type: verdict, recipeId, at: new Date().toISOString(), personId, attendeeIds },
+          { type: verdict, recipeId, at: new Date().toISOString(), personId, attendeeIds, day, slot },
         ]),
       );
     },
@@ -274,11 +292,39 @@ export default function App() {
     [result],
   );
 
-  const proposals = useMemo(
-    () =>
-      proposeRules(feedback, household).filter((p) => !dismissed.includes(p.id)),
-    [feedback, household, dismissed],
-  );
+  const proposals = useMemo(() => {
+    const inferred = proposeRules(feedback, household).filter((p) => !dismissed.includes(p.id));
+    // AI-surfaced patterns lead — they were just asked for — and never double up
+    // with an inferred proposal that reached the same conclusion.
+    const ai = aiProposals.filter(
+      (p) => !dismissed.includes(p.id) && !inferred.some((q) => q.id === p.id),
+    );
+    return [...ai, ...inferred];
+  }, [feedback, household, dismissed, aiProposals]);
+
+  /**
+   * "What we've noticed" — ask the model to read the same anonymised history the
+   * rule engine sees and describe patterns the fixed vocabulary can't. Whatever
+   * comes back is vetted client-side and merged into the suggestions panel; it
+   * changes nothing until someone accepts it.
+   */
+  const analyseNoticed = useCallback(async () => {
+    setAnalysing(true);
+    setAiStatus(null);
+    const result = await analysePatterns(feedback, household, sessionId);
+    setAnalysing(false);
+    if (result.error) {
+      setAiStatus(result.error);
+      return;
+    }
+    const fresh = result.proposals.filter((p) => !dismissed.includes(p.id));
+    setAiProposals(fresh);
+    setAiStatus(
+      fresh.length === 0
+        ? 'Nothing new — the rules already capture what we can see.'
+        : `${fresh.length} new suggestion${fresh.length === 1 ? '' : 's'} added to the panel on the Meals tab.`,
+    );
+  }, [feedback, household, sessionId, dismissed]);
 
   const plannedOvers = useMemo(
     () => (result ? suggestPlannedOvers(result.plan, ctx) : []),
@@ -685,6 +731,10 @@ export default function App() {
           plan={result.plan}
           ctx={ctx}
           feedback={feedback}
+          weeksOfHistory={history.length}
+          onAnalyse={analyseNoticed}
+          analysing={analysing}
+          analysisStatus={aiStatus}
           onClose={() => setTab('meals')}
         />
       )}

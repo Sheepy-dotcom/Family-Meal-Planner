@@ -65,8 +65,7 @@ export function CookedReview({ plan, household, feedback, onFinish, onSkip }: Pr
 
   function finish() {
     const at = new Date().toISOString();
-    const attendanceOf = (recipeId: string) =>
-      cooked.find((m) => m.recipeId === recipeId)?.attendeeIds;
+    const placeOf = (recipeId: string) => cooked.find((m) => m.recipeId === recipeId);
 
     const events: FeedbackEvent[] = [
       ...cooked.map((m) => ({
@@ -74,17 +73,22 @@ export function CookedReview({ plan, household, feedback, onFinish, onSkip }: Pr
         recipeId: m.recipeId,
         at,
         attendeeIds: m.attendeeIds,
+        day: m.day,
+        slot: m.slot,
       })),
       ...Object.entries(verdicts)
         .filter(([, v]) => v)
         .map(([key, v]) => {
           const [recipeId, personId] = key.split(':');
+          const place = placeOf(recipeId);
           return {
             type: v as Verdict,
             recipeId,
             at,
             personId,
-            attendeeIds: attendanceOf(recipeId),
+            attendeeIds: place?.attendeeIds,
+            day: place?.day,
+            slot: place?.slot,
           };
         }),
     ];

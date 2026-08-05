@@ -1,5 +1,5 @@
 import { buildToday, type TodayMeal } from '../../core/planner/today.js';
-import type { Household, MealPlan, Person, PlannedMeal } from '../../core/types.js';
+import type { DayIndex, Household, MealPlan, MealSlot, Person, PlannedMeal } from '../../core/types.js';
 import { MealRating, type Verdict } from './MealRating.js';
 
 interface Props {
@@ -12,7 +12,14 @@ interface Props {
   /** Current verdict for a person on a dish, so a rating reads its state. */
   verdictOf: (recipeId: string, personId: string) => Verdict | undefined;
   /** Record a per-person verdict the moment it's tapped. */
-  onRate: (recipeId: string, personId: string, verdict: Verdict, attendeeIds: string[]) => void;
+  onRate: (
+    recipeId: string,
+    personId: string,
+    verdict: Verdict,
+    attendeeIds: string[],
+    day: DayIndex,
+    slot: MealSlot,
+  ) => void;
   /** Injectable for tests; the app passes the real clock. */
   now?: Date;
 }
@@ -36,7 +43,7 @@ export function Today({ plan, household, onCook, onGoToWeek, verdictOf, onRate, 
         people={m.attendees}
         verdictOf={(personId) => verdictOf(m.meal.recipeId, personId)}
         onRate={(personId, verdict) =>
-          onRate(m.meal.recipeId, personId, verdict, m.attendees.map((p) => p.id))
+          onRate(m.meal.recipeId, personId, verdict, m.attendees.map((p) => p.id), m.meal.day, m.meal.slot)
         }
       />
     ) : null;

@@ -5,14 +5,21 @@ import { DAY_NAMES } from '../../core/rules/context.js';
 import type { RuleContext } from '../../core/rules/context.js';
 import { explainMeal } from '../../core/planner/explain.js';
 import { MealRating, type Verdict } from './MealRating.js';
-import type { MealPlan, PlannedMeal } from '../../core/types.js';
+import type { DayIndex, MealPlan, MealSlot, PlannedMeal } from '../../core/types.js';
 
 interface Props {
   meal: PlannedMeal;
   plan: MealPlan;
   ctx: RuleContext;
   verdictOf: (recipeId: string, personId: string) => Verdict | undefined;
-  onRate: (recipeId: string, personId: string, verdict: Verdict, attendeeIds: string[]) => void;
+  onRate: (
+    recipeId: string,
+    personId: string,
+    verdict: Verdict,
+    attendeeIds: string[],
+    day: DayIndex,
+    slot: MealSlot,
+  ) => void;
   onClose: () => void;
   onSwap: () => void;
 }
@@ -179,7 +186,7 @@ export function RecipeView({ meal, plan, ctx, verdictOf, onRate, onClose, onSwap
             people={diners}
             verdictOf={(personId) => verdictOf(meal.recipeId, personId)}
             onRate={(personId, verdict) =>
-              onRate(meal.recipeId, personId, verdict, meal.attendeeIds)
+              onRate(meal.recipeId, personId, verdict, meal.attendeeIds, meal.day, meal.slot)
             }
           />
         )}
