@@ -2062,6 +2062,111 @@ select {
   }
 }
 
+/* --- rating prompt ------------------------------------------------------- */
+/* "How was it?" — inline, dismissable, one tap per person. Appears on a meal
+   whose slot has passed, and at the foot of a recipe just cooked. */
+
+.rate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--step) * 2) calc(var(--step) * 3);
+  margin-top: calc(var(--step) * 3);
+  padding: calc(var(--step) * 2.5) calc(var(--step) * 3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.rate__q {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.rate__people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--step) * 2) calc(var(--step) * 4);
+  flex: 1;
+}
+
+.rate__person {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--step) * 1.5);
+}
+
+.rate__name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-right: calc(var(--step) * 0.5);
+}
+
+.rate__dismiss {
+  border: none;
+  background: none;
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rate__dismiss:hover {
+  color: var(--accent);
+}
+
+/* On the dark hero card, lift the prompt off the panel. */
+.today__hero .rate {
+  margin-top: calc(var(--step) * 5);
+}
+
+/* --- what we've learned (people tab) ------------------------------------- */
+
+.learned {
+  display: grid;
+  gap: calc(var(--step) * 4);
+  margin-bottom: calc(var(--step) * 5);
+}
+
+.learned__label {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--step) * 2);
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 calc(var(--step) * 2);
+}
+
+.learned__tag {
+  font-family: var(--data);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.learned__tag--fact {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.learned__tag--guess {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
 /* --- tab pages ----------------------------------------------------------- */
 /* Panels that used to be modals now render inline, so they lose the sheet's
    card treatment and sit directly on the page. */

@@ -33,6 +33,24 @@ export interface TodayMeal {
   hero: boolean;
   /** A planned-over cooked earlier in the week: reheat, don't cook again. */
   carried: boolean;
+  /** The slot's eating window has passed, so it's a good moment to rate it. */
+  past: boolean;
+}
+
+/**
+ * Roughly when each slot's eating window closes. Used to decide when a meal is
+ * behind us and worth rating — not to schedule anything, so approximate is fine.
+ */
+const SLOT_END_HOUR: Record<MealSlot, number> = {
+  breakfast: 10,
+  lunch: 14,
+  dinner: 20,
+  snack: 17,
+};
+
+/** Has this slot's window passed, at the given moment? */
+export function slotHasPassed(slot: MealSlot, now: Date): boolean {
+  return now.getHours() >= SLOT_END_HOUR[slot];
 }
 
 /**
@@ -106,6 +124,7 @@ export function buildToday(
         handsOnMinutes: recipe.activeMinutes,
         hero: meal.slot === 'dinner',
         carried: meal.source === 'planned-over',
+        past: slotHasPassed(meal.slot, now),
       };
     });
 

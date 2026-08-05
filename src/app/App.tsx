@@ -27,7 +27,7 @@ import {
   loadPantry,
   savePantry,
 } from '../store/persist.js';
-import { proposeRules, applyProposal, favouritesFor } from '../core/learning/feedback.js';
+import { proposeRules, applyProposal, favouritesFor, dishVerdicts } from '../core/learning/feedback.js';
 import { suggestPlannedOvers, applyPlannedOver } from '../core/planner/leftovers.js';
 import { reconcilePlan, repairPlan } from '../core/planner/reconcile.js';
 import { dropOrphanedMeals, mealsUsing } from '../core/planner/integrity.js';
@@ -185,6 +185,35 @@ export default function App() {
       );
     },
     [household],
+  );
+
+  /**
+   * A per-person verdict, captured the moment it's easy — a meal that's just
+   * been eaten, or a recipe just cooked. personId is set, which makes this the
+   * strongest signal the learning engine has: a stated fact, not an inference.
+   */
+  const rateMeal = useCallback(
+    (recipeId: string, personId: string, verdict: 'liked' | 'disliked', attendeeIds: string[]) => {
+      setFeedback(
+        recordFeedback([
+          { type: verdict, recipeId, at: new Date().toISOString(), personId, attendeeIds },
+        ]),
+      );
+    },
+    [],
+  );
+
+  // Current explicit verdicts, so a rating widget reads back its own state.
+  const verdicts = useMemo(() => dishVerdicts(feedback, household), [feedback, household]);
+  const verdictOf = useCallback(
+    (recipeId: string, personId: string): 'liked' | 'disliked' | undefined => {
+      const v = verdicts.find((x) => x.recipeId === recipeId);
+      if (!v) return undefined;
+      if (v.likedBy.includes(personId)) return 'liked';
+      if (v.dislikedBy.includes(personId)) return 'disliked';
+      return undefined;
+    },
+    [verdicts],
   );
 
   const swapMeal = useCallback(
@@ -539,6 +568,8 @@ export default function App() {
               household={household}
               onCook={setReading}
               onGoToWeek={() => setMealsView('week')}
+              verdictOf={verdictOf}
+              onRate={rateMeal}
             />
           )}
 
@@ -687,6 +718,8 @@ export default function App() {
           meal={reading}
           plan={result.plan}
           ctx={ctx}
+          verdictOf={verdictOf}
+          onRate={rateMeal}
           onClose={() => setReading(null)}
           onSwap={() => {
             setSwapping({ day: reading.day, slot: reading.slot });
@@ -710,6 +743,7 @@ export default function App() {
         <CookedReview
           plan={result.plan}
           household={household}
+          feedback={feedback}
           onFinish={finishWeek}
           onSkip={() => setReviewing(false)}
         />

@@ -4,12 +4,15 @@ import { scaleRecipeForMeal, timingFor } from '../../core/recipes/scale.js';
 import { DAY_NAMES } from '../../core/rules/context.js';
 import type { RuleContext } from '../../core/rules/context.js';
 import { explainMeal } from '../../core/planner/explain.js';
+import { MealRating, type Verdict } from './MealRating.js';
 import type { MealPlan, PlannedMeal } from '../../core/types.js';
 
 interface Props {
   meal: PlannedMeal;
   plan: MealPlan;
   ctx: RuleContext;
+  verdictOf: (recipeId: string, personId: string) => Verdict | undefined;
+  onRate: (recipeId: string, personId: string, verdict: Verdict, attendeeIds: string[]) => void;
   onClose: () => void;
   onSwap: () => void;
 }
@@ -26,11 +29,14 @@ interface Props {
  * hands: large type, generous tap targets, steps that stay struck through once
  * tapped so you can find your place after being interrupted.
  */
-export function RecipeView({ meal, plan, ctx, onClose, onSwap }: Props) {
+export function RecipeView({ meal, plan, ctx, verdictOf, onRate, onClose, onSwap }: Props) {
   const dialogRef = useModal(onClose);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [gathered, setGathered] = useState<Set<string>>(new Set());
   const why = explainMeal(meal, plan, ctx).sentence;
+  // Only the people who ate it get a say. Carried planned-overs were already
+  // rated as their source cook, so they don't ask again.
+  const diners = ctx.household.people.filter((p) => meal.attendeeIds.includes(p.id));
 
   const scaled = scaleRecipeForMeal(meal, ctx);
   const timing = timingFor(scaled);
@@ -165,6 +171,17 @@ export function RecipeView({ meal, plan, ctx, onClose, onSwap }: Props) {
               </li>
             ))}
           </ol>
+        )}
+
+        {/* Just finished cooking — the moment an opinion is most likely to exist. */}
+        {meal.source !== 'planned-over' && diners.length > 0 && (
+          <MealRating
+            people={diners}
+            verdictOf={(personId) => verdictOf(meal.recipeId, personId)}
+            onRate={(personId, verdict) =>
+              onRate(meal.recipeId, personId, verdict, meal.attendeeIds)
+            }
+          />
         )}
 
         <div className="onboarding__foot">

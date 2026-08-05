@@ -96,30 +96,61 @@ export function PersonView({ plan, ctx, feedback, onClose , variant = 'sheet' }:
           </>
         )}
 
-        {profile.favourites.length > 0 && (
+        {(profile.favourites.length > 0 ||
+          profile.dislikes.length > 0 ||
+          profile.attributedSuggestions.length > 0) && (
           <>
-            <p className="eyebrow">{person.name} likes</p>
-            <div className="chips" style={{ marginBottom: 20 }}>
-              {profile.favourites.map((f) => (
-                <span className="chip chip--good" key={f.recipeId}>
-                  {f.name}
-                </span>
-              ))}
-            </div>
-          </>
-        )}
-
-        {profile.attributedSuggestions.length > 0 && (
-          <>
-            <p className="eyebrow">Noticed about {person.name}</p>
-            {profile.attributedSuggestions.map((s, i) => (
-              <div className="suggestion" key={i}>
-                <div>
-                  <p className="suggestion__text">{s.suggestion}</p>
-                  <p className="suggestion__evidence">{s.evidence}</p>
+            <p className="eyebrow">What we've learned</p>
+            <div className="learned">
+              {/* Stated facts: things this person actually said, one tap at a time. */}
+              {profile.favourites.length > 0 && (
+                <div className="learned__group">
+                  <p className="learned__label">
+                    Said they like <span className="learned__tag learned__tag--fact">stated</span>
+                  </p>
+                  <div className="chips">
+                    {profile.favourites.map((f) => (
+                      <span className="chip chip--good" key={f.recipeId}>
+                        {f.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )}
+
+              {profile.dislikes.length > 0 && (
+                <div className="learned__group">
+                  <p className="learned__label">
+                    Said no to <span className="learned__tag learned__tag--fact">stated</span>
+                  </p>
+                  <div className="chips">
+                    {profile.dislikes.map((d) => (
+                      <span className="chip chip--on" key={d.recipeId}>
+                        {d.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Inference: patterns the app has spotted but nobody has confirmed. */}
+              {profile.attributedSuggestions.length > 0 && (
+                <div className="learned__group">
+                  <p className="learned__label">
+                    A pattern we've spotted{' '}
+                    <span className="learned__tag learned__tag--guess">a guess</span>
+                  </p>
+                  {profile.attributedSuggestions.map((s, i) => (
+                    <div className="suggestion" key={i}>
+                      <div>
+                        <p className="suggestion__text">{s.suggestion}</p>
+                        <p className="suggestion__evidence">{s.evidence}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
 
