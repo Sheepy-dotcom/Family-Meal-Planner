@@ -242,7 +242,7 @@ function consecutiveClash(rule: NoConsecutiveRule, a: Recipe, b: Recipe): boolea
 }
 
 function noConsecutiveHard(rule: NoConsecutiveRule): HardRule {
-  const chainSlot = rule.slot ?? 'dinner';
+  const chainSlot: MealSlot = 'dinner';
   const what = rule.by === 'cuisine' ? 'cuisine' : singularTag(rule.tag ?? 'salad');
   return {
     id: idFor(rule),
@@ -262,7 +262,7 @@ function noConsecutiveHard(rule: NoConsecutiveRule): HardRule {
 }
 
 function noConsecutiveSoft(rule: NoConsecutiveRule): SoftRule {
-  const chainSlot = rule.slot ?? 'dinner';
+  const chainSlot: MealSlot = 'dinner';
   const what = rule.by === 'cuisine' ? 'cuisine' : singularTag(rule.tag ?? 'salad');
   return {
     id: idFor(rule),

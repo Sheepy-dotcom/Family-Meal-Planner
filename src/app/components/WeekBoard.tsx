@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getRecipe } from '../../core/data/registry.js';
-import { DAY_NAMES, attendeesFor } from '../../core/rules/context.js';
+import { DAY_NAMES, SLOT_ORDER, attendeesFor } from '../../core/rules/context.js';
 import type { RuleContext } from '../../core/rules/context.js';
 import { explainMeal } from '../../core/planner/explain.js';
 import type {
@@ -14,7 +14,6 @@ import type { SolveResult } from '../../core/planner/solver.js';
 import { AttendanceBar } from './AttendanceBar.js';
 
 const DAYS: DayIndex[] = [0, 1, 2, 3, 4, 5, 6];
-const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 interface Props {
   plan: MealPlan;

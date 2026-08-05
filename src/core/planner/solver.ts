@@ -4,6 +4,7 @@ import {
   DAY_NAMES,
   attendeesFor,
   portionsFor,
+  slotOrder,
   type RuleContext,
 } from '../rules/context.js';
 import { DEFAULT_TARGETS, DEFAULT_WEIGHTS, type PlannerTargets } from '../rules/config.js';
@@ -353,9 +354,4 @@ export function explainRejection(
   return hardRulesFor(ctx)
     .filter((rule) => !rule.allows(recipe, ref.day, ref.slot, ctx))
     .map((rule) => rule.explain(recipe, ref.day, ref.slot, ctx));
-}
-
-const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
-function slotOrder(slot: MealSlot): number {
-  return SLOT_ORDER.indexOf(slot);
 }

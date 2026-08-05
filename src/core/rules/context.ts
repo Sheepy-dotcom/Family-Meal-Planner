@@ -23,6 +23,14 @@ export const DAY_NAMES = [
   'Sunday',
 ] as const;
 
+/** The order meals read down in, everywhere a day's meals are listed. */
+export const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+/** Sort key for a slot, so callers don't each re-declare the order. */
+export function slotOrder(slot: MealSlot): number {
+  return SLOT_ORDER.indexOf(slot);
+}
+
 /**
  * Everything the rules are allowed to see. Passing a context rather than
  * globals means rules stay pure functions, which is what makes the solver

@@ -147,7 +147,7 @@ console.log('\nCustom household rules');
 
 // --- no repeated cuisine on consecutive days, hard ----------------------
 {
-  const rule: NoConsecutiveRule = { id: 'no-run', kind: 'no-consecutive', enforcement: 'hard', by: 'cuisine', slot: 'dinner' };
+  const rule: NoConsecutiveRule = { id: 'no-run', kind: 'no-consecutive', enforcement: 'hard', by: 'cuisine' };
   const [hard] = compileHardRules([rule]);
   const ctx = ctxWith([rule]);
   const monday = [meal(0, 'dinner', 'salmon-traybake')]; // italian on Monday

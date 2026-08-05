@@ -138,6 +138,22 @@ check('a day after the week is outside it', todayIndex(WEEK, new Date(2026, 7, 1
   check('planned-over comes first', view.comingUp[0]?.kind === 'planned-over');
 }
 
+// --- coming up: many make-aheads collapse to one, dinner preferred ------
+{
+  const view = buildToday(
+    plan([
+      meal(0, 'dinner', 'steak-chips-salad'),
+      meal(1, 'breakfast', 'overnight-oats-berries'), // make-ahead
+      meal(1, 'lunch', 'tuna-sweetcorn-wraps'), // make-ahead
+      meal(1, 'dinner', 'beef-chilli'), // make-ahead
+    ]),
+    SEED_HOUSEHOLD,
+    noon(0),
+  );
+  check('three make-aheads collapse to a single note', view.comingUp.length === 1, `${view.comingUp.length}`);
+  check('and the dinner is the one kept', view.comingUp[0]?.targetSlot === 'dinner', view.comingUp[0]?.targetSlot);
+}
+
 // --- a planned-over today reads as a reheat, not a cook -----------------
 {
   const view = buildToday(

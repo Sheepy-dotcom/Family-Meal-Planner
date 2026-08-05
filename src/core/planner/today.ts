@@ -10,7 +10,7 @@
  */
 
 import { getRecipe } from '../data/registry.js';
-import { attendeesFor, DAY_NAMES } from '../rules/context.js';
+import { attendeesFor, DAY_NAMES, SLOT_ORDER } from '../rules/context.js';
 import type {
   DayIndex,
   Household,
@@ -20,9 +20,6 @@ import type {
   PlannedMeal,
   Recipe,
 } from '../types.js';
-
-/** Order meals read down in, and the slot that gets top billing. */
-const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 export interface TodayMeal {
   slot: MealSlot;
@@ -130,7 +127,10 @@ export function buildToday(
  * Things happening today for tomorrow's sake.
  *
  * Planned-overs come first: they change what you do at tonight's hob, so
- * they're the more urgent nudge. Make-aheads follow, in slot order.
+ * they're the more urgent nudge. Then a *single* make-ahead — most make-ahead
+ * tags are breakfasts and lunches, and three "you can start it tonight" lines
+ * is noise, not help. The dinner is the one worth getting ahead on, so it wins;
+ * otherwise the earliest make-ahead stands in.
  */
 function comingUpFor(plan: MealPlan, day: DayIndex): ComingUp[] {
   const tomorrow = (day + 1) as DayIndex;
@@ -176,7 +176,9 @@ function comingUpFor(plan: MealPlan, day: DayIndex): ComingUp[] {
     }
   }
 
-  return [...plannedOvers, ...makeAheads];
+  // One make-ahead is a prompt; three is a chore list. Prefer the dinner.
+  const makeAhead = makeAheads.find((m) => m.targetSlot === 'dinner') ?? makeAheads[0];
+  return [...plannedOvers, ...(makeAhead ? [makeAhead] : [])];
 }
 
 function emptyView(status: TodayStatus, day: DayIndex | null): TodayView {

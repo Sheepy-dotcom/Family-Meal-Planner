@@ -85,7 +85,7 @@ function buildRule(d: Draft): CustomRule | null {
       if (d.count < 1) return null;
       return { id, kind: 'tag-count', enforcement: d.enforcement, tag: d.tag, bound: d.bound, count: d.count };
     case 'no-consecutive':
-      return { id, kind: 'no-consecutive', enforcement: d.enforcement, by: d.by, tag: d.by === 'tag' ? d.tag : undefined, slot: 'dinner' };
+      return { id, kind: 'no-consecutive', enforcement: d.enforcement, by: d.by, tag: d.by === 'tag' ? d.tag : undefined };
   }
 }
 
@@ -252,7 +252,15 @@ export function RulesEditor({ household, ctx, onChange }: Props) {
           {rule === null && <p className="rules__blurb">Fill in the rule to see its effect.</p>}
 
           <div className="actions">
-            <button className="btn btn--primary" onClick={add} disabled={!rule}>Add rule</button>
+            {/* Adding a rule the preview says is impossible is allowed, but it's
+                a deliberate "anyway" — never a silent primary action. */}
+            <button
+              className={`btn ${impact && !impact.ok ? 'btn--danger' : 'btn--primary'}`}
+              onClick={add}
+              disabled={!rule}
+            >
+              {impact && !impact.ok ? 'Add anyway' : 'Add rule'}
+            </button>
             <button className="btn" onClick={() => setDraft(null)}>Cancel</button>
           </div>
         </div>

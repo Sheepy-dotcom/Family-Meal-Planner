@@ -336,14 +336,16 @@ export interface TagCountRule extends CustomRuleBase {
   count: number;
 }
 
-/** Never repeat the same cuisine (or tag) on consecutive days in a slot. */
+/**
+ * Never repeat the same cuisine (or tag) on consecutive days. Watches the
+ * dinner run — the meal a household actually plans around, and the same slot
+ * the built-in cuisine-variety rule uses.
+ */
 export interface NoConsecutiveRule extends CustomRuleBase {
   kind: 'no-consecutive';
   by: 'cuisine' | 'tag';
   /** Required when by === 'tag'. */
   tag?: RecipeTag;
-  /** Which slot's run to watch; defaults to dinner. */
-  slot?: MealSlot;
 }
 
 export type CustomRule =
