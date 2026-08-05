@@ -555,6 +555,7 @@ export default function App() {
               <WeekBoard
                 plan={result.plan}
                 household={household}
+                ctx={ctx}
                 unfilled={result.unfilled}
                 onSwap={(day, slot) => setSwapping({ day, slot })}
                 onToggleAttendance={toggleAttendance}
@@ -627,9 +628,10 @@ export default function App() {
       )}
 
 
-      {reading && (
+      {reading && result && (
         <RecipeView
           meal={reading}
+          plan={result.plan}
           ctx={ctx}
           onClose={() => setReading(null)}
           onSwap={() => {

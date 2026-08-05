@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { scaleRecipeForMeal, timingFor } from '../../core/recipes/scale.js';
 import { DAY_NAMES } from '../../core/rules/context.js';
 import type { RuleContext } from '../../core/rules/context.js';
-import type { PlannedMeal } from '../../core/types.js';
+import { explainMeal } from '../../core/planner/explain.js';
+import type { MealPlan, PlannedMeal } from '../../core/types.js';
 
 interface Props {
   meal: PlannedMeal;
+  plan: MealPlan;
   ctx: RuleContext;
   onClose: () => void;
   onSwap: () => void;
@@ -24,10 +26,11 @@ interface Props {
  * hands: large type, generous tap targets, steps that stay struck through once
  * tapped so you can find your place after being interrupted.
  */
-export function RecipeView({ meal, ctx, onClose, onSwap }: Props) {
+export function RecipeView({ meal, plan, ctx, onClose, onSwap }: Props) {
   const dialogRef = useModal(onClose);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [gathered, setGathered] = useState<Set<string>>(new Set());
+  const why = explainMeal(meal, plan, ctx).sentence;
 
   const scaled = scaleRecipeForMeal(meal, ctx);
   const timing = timingFor(scaled);
@@ -67,6 +70,7 @@ export function RecipeView({ meal, ctx, onClose, onSwap }: Props) {
               {DAY_NAMES[meal.day]} {meal.slot}
             </p>
             <h2 className="cook__title">{scaled.recipe.name}</h2>
+            <p className="cook__why">{why}</p>
           </div>
           <button className="btn btn--ghost" onClick={onClose}>
             Close
