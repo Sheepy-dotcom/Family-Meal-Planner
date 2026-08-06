@@ -31,7 +31,8 @@ export type FeedbackType =
   | 'rejected' // swapped this dish out of a slot
   | 'cooked' // week was marked as cooked with this dish in it
   | 'liked'
-  | 'disliked';
+  | 'disliked'
+  | 'missed'; // planned, but not eaten — by one person or the whole table
 
 export interface FeedbackEvent {
   type: FeedbackType;
@@ -463,6 +464,8 @@ export interface DishVerdict {
   likedBy: string[];
   /** People who have said they don't. */
   dislikedBy: string[];
+  /** People who were down to eat it but didn't. Not a taste verdict. */
+  missedBy: string[];
   /** Everyone eating liked it and nobody objected. */
   universal: boolean;
 }
@@ -477,28 +480,33 @@ export function dishVerdicts(
   events: FeedbackEvent[],
   household: Household,
 ): DishVerdict[] {
-  const byRecipe = new Map<string, { liked: Set<string>; disliked: Set<string> }>();
+  const byRecipe = new Map<
+    string,
+    { liked: Set<string>; disliked: Set<string>; missed: Set<string> }
+  >();
 
   for (const event of events) {
     if (!event.personId) continue;
-    if (event.type !== 'liked' && event.type !== 'disliked') continue;
+    if (event.type !== 'liked' && event.type !== 'disliked' && event.type !== 'missed') continue;
     const entry =
-      byRecipe.get(event.recipeId) ?? { liked: new Set<string>(), disliked: new Set<string>() };
-    // The most recent verdict wins: people change their minds.
-    if (event.type === 'liked') {
-      entry.liked.add(event.personId);
-      entry.disliked.delete(event.personId);
-    } else {
-      entry.disliked.add(event.personId);
-      entry.liked.delete(event.personId);
-    }
+      byRecipe.get(event.recipeId) ??
+      { liked: new Set<string>(), disliked: new Set<string>(), missed: new Set<string>() };
+    // The most recent signal wins, and the three are mutually exclusive: a
+    // person who ate and rated it can't also have missed it, and vice versa.
+    entry.liked.delete(event.personId);
+    entry.disliked.delete(event.personId);
+    entry.missed.delete(event.personId);
+    if (event.type === 'liked') entry.liked.add(event.personId);
+    else if (event.type === 'disliked') entry.disliked.add(event.personId);
+    else entry.missed.add(event.personId);
     byRecipe.set(event.recipeId, entry);
   }
 
-  return [...byRecipe].map(([recipeId, { liked, disliked }]) => ({
+  return [...byRecipe].map(([recipeId, { liked, disliked, missed }]) => ({
     recipeId,
     likedBy: [...liked],
     dislikedBy: [...disliked],
+    missedBy: [...missed],
     // "Everyone loves this" needs the whole household to have said so, not just
     // an absence of complaints.
     universal:

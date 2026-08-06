@@ -1041,6 +1041,15 @@ select:focus-visible {
   font-weight: 600;
 }
 
+/* "Missed" — a neutral filled state, neither the green of liked nor the red of
+   disliked, because not eating a dish says nothing about it. */
+.chip--missed {
+  background: var(--text-dim);
+  border-color: var(--text-dim);
+  color: var(--bg);
+  font-weight: 600;
+}
+
 .grid-away {
   display: grid;
   grid-template-columns: 72px repeat(7, minmax(0, 1fr));
@@ -2188,6 +2197,14 @@ select {
   background: var(--surface);
 }
 
+.rate__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--step) * 3);
+  width: 100%;
+}
+
 .rate__q {
   font-family: var(--display);
   font-size: 12px;
@@ -2195,6 +2212,46 @@ select {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
+}
+
+/* The one-tap "whole table missed it" — quiet until pressed. */
+.rate__all-missed {
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: calc(var(--step) * 1) calc(var(--step) * 2.5);
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
+}
+
+.rate__all-missed:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.rate__all-missed[aria-pressed='true'] {
+  background: var(--text-dim);
+  border-color: var(--text-dim);
+  color: var(--bg);
+}
+
+/* On the dark hero, the missed controls read in the panel ink. */
+.today__hero .chip--missed,
+.today__hero .rate__all-missed[aria-pressed='true'] {
+  background: var(--panel-text);
+  border-color: var(--panel-text);
+  color: #123a37;
+}
+
+.today__hero .rate__all-missed {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--panel-dim);
 }
 
 .rate__people {
