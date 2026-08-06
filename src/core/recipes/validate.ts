@@ -40,6 +40,7 @@ export interface RecipeDraft {
   totalMinutes?: number;
   ingredients?: Recipe['ingredients'];
   method?: string[];
+  guide?: string[];
   style?: string;
   isNew?: boolean;
 }
@@ -183,6 +184,7 @@ export function finaliseRecipe(draft: RecipeDraft): Recipe {
     totalMinutes: draft.totalMinutes!,
     ingredients: draft.ingredients!,
     method: (draft.method ?? []).filter((step) => step.trim()),
+    guide: draft.guide?.filter((step) => step.trim()),
     style: draft.style,
     isNew: draft.isNew ?? true,
   };
