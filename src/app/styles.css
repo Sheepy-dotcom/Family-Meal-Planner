@@ -27,23 +27,30 @@
 
   /* Semantic tokens — light theme. Components read these, never the raw hues,
      so the dark block further down only has to restate this handful. */
-  --bg: #e9ebe3;
+  --bg: #e7eae1;
+  /* A soft ambient light rather than a printed dot grid: a highlight falling
+     from the top and a faint enamel tint in the corner. Reads as depth, not
+     graph paper — the shift from workmanlike to premium starts here. */
   --bg-grain: radial-gradient(
-    circle at 1px 1px,
-    rgba(29, 43, 38, 0.045) 1px,
-    transparent 0
-  );
-  --surface: rgba(255, 255, 255, 0.62);
-  --surface-hover: rgba(255, 255, 255, 0.92);
-  --surface-2: #f6f7f2;
-  --text: #1d2b26;
-  --text-dim: #4b5a53;
+      140% 100% at 50% -25%,
+      rgba(255, 255, 255, 0.6),
+      transparent 55%
+    ),
+    radial-gradient(120% 90% at 100% 0%, rgba(15, 92, 99, 0.06), transparent 46%);
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-hover: #ffffff;
+  --surface-2: #f4f6ef;
+  --text: #16221d;
+  --text-dim: #46564e;
   --text-muted: #6d7a72;
-  --border: rgba(29, 43, 38, 0.12);
-  --border-strong: rgba(29, 43, 38, 0.26);
+  --border: rgba(29, 43, 38, 0.1);
+  --border-strong: rgba(29, 43, 38, 0.22);
   --accent: #0f5c63;
   --accent-strong: #0a464c;
   --accent-soft: rgba(15, 92, 99, 0.09);
+  --accent-grad: linear-gradient(135deg, #17828c 0%, #0f5c63 100%);
+  --accent-shadow: rgba(15, 92, 99, 0.4);
+  --hero-grad: linear-gradient(150deg, #14646c 0%, #0f4c53 48%, #123a37 100%);
   --on-accent: #f3f5ef;
   --danger: #a83b2c;
   --danger-soft: rgba(168, 59, 44, 0.08);
@@ -63,18 +70,18 @@
   --line: var(--border);
   --line-strong: var(--border-strong);
 
-  --shadow-sm: 0 1px 2px rgba(29, 43, 38, 0.06);
-  --shadow-md: 0 6px 18px rgba(29, 43, 38, 0.1);
-  --shadow-lg: 0 18px 44px rgba(29, 43, 38, 0.18);
+  --shadow-sm: 0 1px 2px rgba(29, 43, 38, 0.07), 0 1px 1px rgba(29, 43, 38, 0.04);
+  --shadow-md: 0 10px 30px -10px rgba(29, 43, 38, 0.2), 0 2px 6px rgba(29, 43, 38, 0.05);
+  --shadow-lg: 0 28px 60px -18px rgba(20, 40, 34, 0.4), 0 8px 20px -12px rgba(20, 40, 34, 0.24);
 
   --display: 'Archivo', system-ui, sans-serif;
   --body: 'Public Sans', system-ui, sans-serif;
   --data: 'Space Mono', ui-monospace, monospace;
 
   --step: 4px;
-  --radius: 7px;
-  --radius-sm: 4px;
-  --radius-lg: 16px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 22px;
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --speed: 150ms;
@@ -87,15 +94,16 @@
    direction so a manual toggle can override the system. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #101613;
+    --bg: #0e1411;
     --bg-grain: radial-gradient(
-      circle at 1px 1px,
-      rgba(236, 238, 231, 0.035) 1px,
-      transparent 0
-    );
-    --surface: rgba(236, 238, 231, 0.04);
-    --surface-hover: rgba(236, 238, 231, 0.08);
-    --surface-2: #19231e;
+        140% 100% at 50% -25%,
+        rgba(43, 160, 171, 0.09),
+        transparent 55%
+      ),
+      radial-gradient(120% 90% at 100% 0%, rgba(43, 160, 171, 0.05), transparent 46%);
+    --surface: rgba(236, 238, 231, 0.05);
+    --surface-hover: rgba(236, 238, 231, 0.09);
+    --surface-2: #18221d;
     --text: #e7ebe3;
     --text-dim: #aab5ad;
     --text-muted: #7f8c84;
@@ -104,6 +112,9 @@
     --accent: #2ba0ab;
     --accent-strong: #38b3bd;
     --accent-soft: rgba(43, 160, 171, 0.16);
+    --accent-grad: linear-gradient(135deg, #33b3bd 0%, #1f8b95 100%);
+    --accent-shadow: rgba(43, 160, 171, 0.35);
+    --hero-grad: linear-gradient(150deg, #12474d 0%, #0d3033 55%, #0a211f 100%);
     --on-accent: #06110f;
     --danger: #d76551;
     --danger-soft: rgba(215, 101, 81, 0.15);
@@ -119,9 +130,9 @@
     --panel-dim: rgba(231, 235, 227, 0.6);
     --panel-line: rgba(231, 235, 227, 0.1);
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.44);
-    --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.6);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 12px 30px -10px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 30px 60px -18px rgba(0, 0, 0, 0.72), 0 8px 20px -12px rgba(0, 0, 0, 0.5);
 
     color-scheme: dark;
   }
@@ -132,15 +143,16 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #101613;
+  --bg: #0e1411;
   --bg-grain: radial-gradient(
-    circle at 1px 1px,
-    rgba(236, 238, 231, 0.035) 1px,
-    transparent 0
-  );
-  --surface: rgba(236, 238, 231, 0.04);
-  --surface-hover: rgba(236, 238, 231, 0.08);
-  --surface-2: #19231e;
+      140% 100% at 50% -25%,
+      rgba(43, 160, 171, 0.09),
+      transparent 55%
+    ),
+    radial-gradient(120% 90% at 100% 0%, rgba(43, 160, 171, 0.05), transparent 46%);
+  --surface: rgba(236, 238, 231, 0.05);
+  --surface-hover: rgba(236, 238, 231, 0.09);
+  --surface-2: #18221d;
   --text: #e7ebe3;
   --text-dim: #aab5ad;
   --text-muted: #7f8c84;
@@ -149,6 +161,9 @@
   --accent: #2ba0ab;
   --accent-strong: #38b3bd;
   --accent-soft: rgba(43, 160, 171, 0.16);
+  --accent-grad: linear-gradient(135deg, #33b3bd 0%, #1f8b95 100%);
+  --accent-shadow: rgba(43, 160, 171, 0.35);
+  --hero-grad: linear-gradient(150deg, #12474d 0%, #0d3033 55%, #0a211f 100%);
   --on-accent: #06110f;
   --danger: #d76551;
   --danger-soft: rgba(215, 101, 81, 0.15);
@@ -162,9 +177,9 @@
   --panel-text: #e7ebe3;
   --panel-dim: rgba(231, 235, 227, 0.6);
   --panel-line: rgba(231, 235, 227, 0.1);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.44);
-  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 12px 30px -10px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 30px 60px -18px rgba(0, 0, 0, 0.72), 0 8px 20px -12px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
 
@@ -181,7 +196,8 @@ body {
 body {
   background-color: var(--bg);
   background-image: var(--bg-grain);
-  background-size: 22px 22px;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--body);
   font-size: 15px;
@@ -278,16 +294,18 @@ select:focus-visible {
 }
 
 .btn--primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-grad);
+  border-color: transparent;
   color: var(--on-accent);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 20px -8px var(--accent-shadow), var(--shadow-sm);
 }
 
 .btn--primary:hover {
-  background: var(--accent-strong);
-  border-color: var(--accent-strong);
+  background: var(--accent-grad);
+  border-color: transparent;
   color: var(--on-accent);
+  filter: brightness(1.07) saturate(1.05);
+  box-shadow: 0 10px 24px -8px var(--accent-shadow), var(--shadow-sm);
 }
 
 .btn--ghost {
@@ -2051,9 +2069,9 @@ select {
 }
 
 .seg__btn--on {
-  background: var(--accent);
+  background: var(--accent-grad);
   color: var(--on-accent);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 6px 14px -6px var(--accent-shadow);
 }
 
 @media (hover: hover) {
@@ -2226,25 +2244,73 @@ select {
 }
 
 .today__hero {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
+  position: relative;
+  overflow: hidden;
+  background: var(--hero-grad);
+  border: none;
   border-radius: var(--radius-lg);
-  padding: calc(var(--step) * 6);
-  box-shadow: var(--shadow-md);
+  padding: calc(var(--step) * 7) calc(var(--step) * 6);
+  box-shadow: var(--shadow-lg);
+  color: var(--panel-text);
+}
+
+/* A soft overhead glow gives the hero real depth — the premium touch a flat
+   fill can't reach — without needing a photo. Sits behind the content. */
+.today__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(90% 70% at 82% -10%, rgba(255, 255, 255, 0.13), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.today__hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .today__hero--carried {
-  border-left-style: dashed;
-  border-left-color: var(--ok);
+  background: linear-gradient(150deg, #1a5a52 0%, #123f3c 52%, #0e2e2b 100%);
+}
+
+/* On the dark hero the metadata and the eyebrow read in the panel's light ink,
+   and the primary action becomes a bright ivory chip so it stays the one thing
+   the eye lands on. */
+.today__hero .today__facts {
+  color: var(--panel-dim);
+}
+
+.today__hero .today__cook {
+  background: #f4f1e8;
+  color: #123a37;
+  border-color: transparent;
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.55);
+}
+
+.today__hero .today__cook:hover {
+  background: #ffffff;
+  color: #123a37;
+  filter: none;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.6);
+}
+
+.today__hero .rate {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.today__hero .rate__q {
+  color: var(--panel-dim);
 }
 
 .today__eyebrow {
   font-family: var(--data);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: #f0c452;
   margin: 0 0 calc(var(--step) * 2);
 }
 
