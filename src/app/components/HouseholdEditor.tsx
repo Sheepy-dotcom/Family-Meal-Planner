@@ -35,7 +35,7 @@ const EDITABLE_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner'];
  * finding out after they press Plan is the failure mode this exists to avoid.
  */
 export function HouseholdEditor({ household, ctx, onChange, onClose , variant = 'sheet' }: Props) {
-  const dialogRef = useModal(onClose);
+  const dialogRef = useModal(onClose, variant === 'sheet');
   const liveCtx: RuleContext = { ...ctx, household };
   const report = checkFeasibility(liveCtx);
   const varietyWarnings = checkVariety(liveCtx);

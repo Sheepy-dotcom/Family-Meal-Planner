@@ -45,7 +45,7 @@ export function PersonView({
   onClose,
   variant = 'sheet',
 }: Props) {
-  const dialogRef = useModal(onClose);
+  const dialogRef = useModal(onClose, variant === 'sheet');
   const [selected, setSelected] = useState(ctx.household.people[0]?.id ?? '');
   const person = ctx.household.people.find((p) => p.id === selected);
   if (!person) return null;

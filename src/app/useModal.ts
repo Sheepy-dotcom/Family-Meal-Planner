@@ -14,12 +14,20 @@ import { useEffect, useRef } from 'react';
  *  - Focus moves into the dialog on open and returns to wherever it was on
  *    close, so you don't lose your place.
  *  - Tab cycles within the dialog rather than escaping behind it.
+ *
+ * `isModal` guards all of it. Some of these screens also render as a plain tab
+ * page (People, Recipes, Settings), where none of this applies — trapping focus
+ * and, crucially, locking body scroll on a page that's meant to scroll is what
+ * made those tabs feel frozen. When it isn't a modal the hook does nothing but
+ * hand back the ref.
  */
-export function useModal(onClose: () => void) {
+export function useModal(onClose: () => void, isModal = true) {
   const ref = useRef<HTMLDivElement | null>(null);
   const previouslyFocused = useRef<Element | null>(null);
 
   useEffect(() => {
+    if (!isModal) return;
+
     previouslyFocused.current = document.activeElement;
 
     const node = ref.current;
@@ -71,7 +79,7 @@ export function useModal(onClose: () => void) {
       document.body.style.overflow = previousOverflow;
       (previouslyFocused.current as HTMLElement | null)?.focus?.();
     };
-  }, [onClose]);
+  }, [onClose, isModal]);
 
   return ref;
 }
