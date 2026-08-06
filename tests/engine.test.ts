@@ -613,6 +613,7 @@ const answers: OnboardingAnswers = {
     { name: 'Robin', ageBand: 'child' },
   ],
   exclusions: { 2: ['nuts', 'peanuts'] },
+  diets: { 1: 'vegetarian' },
   weeknightMinutes: 25,
   plannedSlots: ['dinner'],
   lean: 'more-fish',
@@ -645,6 +646,14 @@ check(
   'exclusions land on the right person',
   built.people[2].dietary.avoidAllergens.includes('nuts') &&
     built.people[0].dietary.avoidAllergens.length === 0,
+);
+check(
+  'a chosen diet lands on the right person',
+  built.people[1].dietary.diet === 'vegetarian',
+);
+check(
+  'no diet chosen means an omnivore (undefined) default',
+  built.people[0].dietary.diet === undefined,
 );
 check(
   'portion factors are derived from age',
