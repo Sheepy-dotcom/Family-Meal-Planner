@@ -27,6 +27,7 @@ import {
   loadPantry,
   savePantry,
   loadSessionId,
+  clearAll,
 } from '../store/persist.js';
 import { proposeRules, applyProposal, favouritesFor, dishVerdicts } from '../core/learning/feedback.js';
 import type { RuleProposal } from '../core/learning/feedback.js';
@@ -544,6 +545,21 @@ export default function App() {
     setOnboarded(true);
   }, []);
 
+  /**
+   * The nuclear option: wipe every stored key and reload. A reload (rather than
+   * resetting state in place) is deliberate — it guarantees the app comes back
+   * up exactly as it would on a first-ever launch, at the welcome screen, with
+   * no stale in-memory state surviving the wipe.
+   */
+  const resetEverything = useCallback(() => {
+    const ok = window.confirm(
+      'Reset everything on this device and start over? Your household, plans, shopping list, recipes and history are erased. This cannot be undone.',
+    );
+    if (!ok) return;
+    clearAll();
+    window.location.reload();
+  }, []);
+
   if (!onboarded) {
     return (
       <div className="shell">
@@ -757,6 +773,7 @@ export default function App() {
             household={household}
             ctx={ctx}
             onChange={changeHousehold}
+            onReset={resetEverything}
             onClose={() => setTab('meals')}
           />
         </>

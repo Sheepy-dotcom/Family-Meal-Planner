@@ -21,6 +21,8 @@ interface Props {
   household: Household;
   ctx: RuleContext;
   onChange: (household: Household) => void;
+  /** Wipe everything on this device and return to the welcome screen. */
+  onReset: () => void;
   onClose: () => void;
 }
 
@@ -34,7 +36,7 @@ const EDITABLE_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner'];
  * relax. Letting someone quietly make their own week impossible and only
  * finding out after they press Plan is the failure mode this exists to avoid.
  */
-export function HouseholdEditor({ household, ctx, onChange, onClose , variant = 'sheet' }: Props) {
+export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , variant = 'sheet' }: Props) {
   const dialogRef = useModal(onClose, variant === 'sheet');
   const liveCtx: RuleContext = { ...ctx, household };
   const report = checkFeasibility(liveCtx);
@@ -44,6 +46,40 @@ export function HouseholdEditor({ household, ctx, onChange, onClose , variant = 
     onChange({
       ...household,
       people: household.people.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    });
+  }
+
+  function addPerson() {
+    const person: Person = {
+      id: `person-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: '',
+      ageBand: 'adult',
+      portionFactor: 1,
+      dietary: { avoidAllergens: [], dislikedIngredients: [], dislikedTags: [] },
+      goal: 'balanced',
+    };
+    onChange({ ...household, people: [...household.people, person] });
+  }
+
+  /**
+   * Removing a person also drops the rows that only made sense for them — their
+   * away-from-the-table marks — so no orphaned references are left behind. The
+   * last person can't be removed: a household of nobody has nothing to plan for.
+   */
+  function removePerson(id: string) {
+    if (household.people.length <= 1) return;
+    const person = household.people.find((p) => p.id === id);
+    const label = person?.name?.trim() || 'this person';
+    if (
+      !window.confirm(
+        `Remove ${label} from the household? Their preferences and who-eats-what are deleted. This can't be undone.`,
+      )
+    )
+      return;
+    onChange({
+      ...household,
+      people: household.people.filter((p) => p.id !== id),
+      absences: household.absences.filter((a) => a.personId !== id),
     });
   }
 
@@ -124,6 +160,17 @@ export function HouseholdEditor({ household, ctx, onChange, onClose , variant = 
         <p className="eyebrow">Who eats here</p>
         {household.people.map((person) => (
           <div className="editor-block" key={person.id}>
+            {household.people.length > 1 && (
+              <div className="editor-block__head">
+                <button
+                  className="link-danger"
+                  onClick={() => removePerson(person.id)}
+                  aria-label={`Remove ${person.name || 'this person'} from the household`}
+                >
+                  Remove
+                </button>
+              </div>
+            )}
             <div className="field-row">
               <label className="field">
                 <span>Name</span>
@@ -242,6 +289,10 @@ export function HouseholdEditor({ household, ctx, onChange, onClose , variant = 
           </div>
         ))}
 
+        <button className="btn btn--ghost btn--addperson" onClick={addPerson}>
+          + Add a person
+        </button>
+
         {/* --- time budgets --- */}
         <p className="eyebrow">Minutes you'll actually stand at the hob</p>
         <p className="field__hint">
@@ -281,6 +332,19 @@ export function HouseholdEditor({ household, ctx, onChange, onClose , variant = 
           Settings save as you change them. Your current plan stays as it is until
           you generate a new one.
         </p>
+
+        {/* --- start over --- */}
+        <p className="eyebrow eyebrow--danger">Start over</p>
+        <div className="editor-block editor-block--danger">
+          <p className="field__hint">
+            Erase everything on this device — the household, this week's plan, the
+            shopping list, saved recipes and all history — and go back to the welcome
+            screen. This can't be undone.
+          </p>
+          <button className="btn btn--danger" onClick={onReset}>
+            Reset everything
+          </button>
+        </div>
       </div>
     </Shell>
   );
