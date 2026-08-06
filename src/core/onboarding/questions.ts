@@ -2,6 +2,7 @@ import { ALLERGENS } from '../data/allergens.js';
 import type {
   Allergen,
   DayIndex,
+  Diet,
   Household,
   MealSlot,
   Person,
@@ -42,6 +43,8 @@ export interface OnboardingAnswers {
   people: Array<{ name: string; ageBand: Person['ageBand'] }>;
   /** Per-person hard exclusions. Keyed by the person's index in `people`. */
   exclusions: Record<number, Allergen[]>;
+  /** Per-person diet, keyed the same way. Absent means omnivore. */
+  diets: Record<number, Diet>;
   /** Realistic hands-on minutes on an ordinary weeknight. */
   weeknightMinutes: number;
   plannedSlots: MealSlot[];
@@ -74,6 +77,7 @@ const PORTION_BY_AGE: Record<Person['ageBand'], number> = {
 export const DEFAULT_ANSWERS: OnboardingAnswers = {
   people: [{ name: '', ageBand: 'adult' }],
   exclusions: {},
+  diets: {},
   weeknightMinutes: 25,
   plannedSlots: ['dinner'],
   lean: 'balanced',
@@ -94,8 +98,8 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'exclusions',
-    prompt: 'Anything anyone must never eat?',
-    why: "Allergies and intolerances only. Everyday dislikes are better learned from what you swap out — you don't have to list them.",
+    prompt: 'Any diets, allergies or intolerances?',
+    why: "Set anyone's diet, and flag allergies or intolerances. Everyday dislikes are better learned from what you swap out — you don't have to list them.",
   },
   {
     id: 'weeknight-time',
@@ -176,6 +180,11 @@ export function buildHousehold(
         avoidAllergens: answers.exclusions[index] ?? [],
         dislikedIngredients: [],
         dislikedTags: [],
+        // Store a diet only when it's a real restriction, so omnivore stays the
+        // clean default (an absent field) rather than a value everyone carries.
+        ...(answers.diets[index] && answers.diets[index] !== 'omnivore'
+          ? { diet: answers.diets[index] }
+          : {}),
       },
     }));
 

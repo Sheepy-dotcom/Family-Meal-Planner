@@ -613,6 +613,7 @@ const answers: OnboardingAnswers = {
     { name: 'Robin', ageBand: 'child' },
   ],
   exclusions: { 2: ['nuts', 'peanuts'] },
+  diets: { 1: 'vegetarian' },
   weeknightMinutes: 25,
   plannedSlots: ['dinner'],
   lean: 'more-fish',
@@ -645,6 +646,14 @@ check(
   'exclusions land on the right person',
   built.people[2].dietary.avoidAllergens.includes('nuts') &&
     built.people[0].dietary.avoidAllergens.length === 0,
+);
+check(
+  'a chosen diet lands on the right person',
+  built.people[1].dietary.diet === 'vegetarian',
+);
+check(
+  'no diet chosen means an omnivore (undefined) default',
+  built.people[0].dietary.diet === undefined,
 );
 check(
   'portion factors are derived from age',
@@ -1745,6 +1754,63 @@ check(
   'only the orphaned meal is lost',
   pruned.meals.length === fragilePlan.meals.length - 1,
 );
+
+// ---------------------------------------------------------------------------
+section('Diets');
+{
+  const chicken = getRecipe('chicken-orzo-onepot');
+  const fish = getRecipe('honey-soy-salmon-bowl');
+  const vegan = getRecipe('red-lentil-dahl');
+  // One adult, so they're present at every meal. Monday dinner avoids the
+  // weekend fish rule muddying the fish checks.
+  const base = SEED_HOUSEHOLD.people[0];
+  const withDiet = (diet: 'omnivore' | 'pescatarian' | 'vegetarian' | 'vegan') => ({
+    household: {
+      ...SEED_HOUSEHOLD,
+      people: [{ ...base, dietary: { ...base.dietary, avoidAllergens: [], diet } }],
+      absences: [],
+    },
+    history: [],
+  });
+  const d: DayIndex = 0;
+
+  const omni = withDiet('omnivore');
+  check('omnivore is offered chicken', isAllowed(chicken, d, 'dinner', omni));
+
+  const veg = withDiet('vegetarian');
+  check('vegetarian is not offered chicken', !isAllowed(chicken, d, 'dinner', veg));
+  check('vegetarian is not offered fish', !isAllowed(fish, d, 'dinner', veg));
+  check('vegetarian is offered a lentil dish', isAllowed(vegan, d, 'dinner', veg));
+
+  const pesc = withDiet('pescatarian');
+  check('pescatarian is offered fish', isAllowed(fish, d, 'dinner', pesc));
+  check('pescatarian is not offered chicken', !isAllowed(chicken, d, 'dinner', pesc));
+
+  const vgn = withDiet('vegan');
+  check('vegan is not offered chicken', !isAllowed(chicken, d, 'dinner', vgn));
+  check('vegan is offered a lentil dish', isAllowed(vegan, d, 'dinner', vgn));
+
+  // Scope: when the restricted diner is out, the dish is allowed again.
+  const veganOut: RuleContext = {
+    ...vgn,
+    household: {
+      ...vgn.household,
+      absences: [{ personId: base.id, day: d, slot: 'dinner' }],
+    },
+  };
+  check('a diet only binds when that person is eating', isAllowed(chicken, d, 'dinner', veganOut));
+
+  // Absent diet field behaves as omnivore, so existing households are unaffected.
+  const legacy: RuleContext = {
+    household: {
+      ...SEED_HOUSEHOLD,
+      people: [{ ...base, dietary: { ...base.dietary, avoidAllergens: [] } }],
+      absences: [],
+    },
+    history: [],
+  };
+  check('no diet set means no restriction', isAllowed(chicken, d, 'dinner', legacy));
+}
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

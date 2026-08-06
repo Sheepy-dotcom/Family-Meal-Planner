@@ -8,6 +8,7 @@ import {
   type RuleContext,
 } from './context.js';
 import { compileHardRules } from './custom.js';
+import { dietAllows, DIET_LABELS } from '../people/diet.js';
 
 /**
  * Hard rules are checked per candidate meal *before* it is ever placed, and
@@ -130,6 +131,28 @@ const dietaryExclusions: HardRule = {
   },
 };
 
+/**
+ * Diets, per diner. A vegan is never offered a dish with an animal protein, a
+ * vegetarian never meat or fish, a pescatarian never meat. Same scope as the
+ * allergen rule: only the people actually at that meal count, so a meat dish is
+ * fine on a night the vegetarian is out.
+ */
+const dietRespected: HardRule = {
+  id: 'diet-respected',
+  label: 'Diets respected',
+  allows: (recipe, day, slot, ctx) => {
+    const present = attendeesFor(ctx.household, day, slot);
+    if (present.length === 0) return true;
+    return present.every((p) => dietAllows(p.dietary.diet, recipe.proteins));
+  },
+  explain: (recipe, day, slot, ctx) => {
+    const clashes = attendeesFor(ctx.household, day, slot)
+      .filter((p) => !dietAllows(p.dietary.diet, recipe.proteins))
+      .map((p) => `${p.name} is ${DIET_LABELS[p.dietary.diet ?? 'omnivore'].toLowerCase()}`);
+    return `${recipe.name}: ${clashes.join(', ')}`;
+  },
+};
+
 /** Ingredients the user has asked to keep out of the plan this week. */
 const weeklyAvoidList: HardRule = {
   id: 'weekly-avoid',
@@ -221,6 +244,7 @@ export const HARD_RULES: HardRule[] = [
   slotFit,
   blockedDishes,
   dietaryExclusions,
+  dietRespected,
   weeklyAvoidList,
   noFishAtWeekendDinners,
   timeBudget,

@@ -3,6 +3,7 @@ import { useModal } from '../useModal.js';
 import { useState } from 'react';
 import { buildPersonProfile } from '../../core/people/profile.js';
 import { DAY_NAMES } from '../../core/rules/context.js';
+import { DIET_LABELS } from '../../core/people/diet.js';
 import type { RuleContext } from '../../core/rules/context.js';
 import type { FeedbackEvent } from '../../core/learning/feedback.js';
 import type { MealPlan } from '../../core/types.js';
@@ -71,6 +72,12 @@ export function PersonView({
               onClick={() => setSelected(p.id)}
             >
               {p.name}
+              {p.dietary.diet && p.dietary.diet !== 'omnivore' && (
+                <span className="chip__badge">{DIET_LABELS[p.dietary.diet]}</span>
+              )}
+              {p.dietary.avoidAllergens.includes('gluten') && (
+                <span className="chip__badge">Gluten-free</span>
+              )}
             </button>
           ))}
         </div>

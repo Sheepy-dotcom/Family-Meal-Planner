@@ -11,7 +11,8 @@ import {
 } from '../../core/onboarding/questions.js';
 import type { Lean, OnboardingAnswers } from '../../core/onboarding/questions.js';
 import { ALLERGEN_LABELS } from '../../core/data/allergens.js';
-import type { Allergen, Household, MealSlot, Person } from '../../core/types.js';
+import { DIETS, DIET_LABELS } from '../../core/people/diet.js';
+import type { Allergen, Diet, Household, MealSlot, Person } from '../../core/types.js';
 
 interface Props {
   onFinish: (household: Household, lean: Lean) => void;
@@ -43,6 +44,10 @@ export function OnboardingFlow({ onFinish, onUseSample }: Props) {
     patch({
       people: answers.people.map((p, i) => (i === index ? { ...p, ...next } : p)),
     });
+  }
+
+  function setDiet(index: number, diet: Diet) {
+    patch({ diets: { ...answers.diets, [index]: diet } });
   }
 
   function toggleExclusion(index: number, allergen: Allergen) {
@@ -144,8 +149,25 @@ export function OnboardingFlow({ onFinish, onUseSample }: Props) {
               .map((person, index) => (
                 <div className="editor-block" key={index}>
                   <p className="field__hint" style={{ marginTop: 0 }}>
-                    {person.name.trim()} must never eat
+                    {person.name.trim()}'s diet
                   </p>
+                  <div className="chips">
+                    {DIETS.map((d) => {
+                      const on = (answers.diets[index] ?? 'omnivore') === d;
+                      return (
+                        <button
+                          key={d}
+                          className={`chip ${on ? 'chip--in' : ''}`}
+                          aria-pressed={on}
+                          onClick={() => setDiet(index, d)}
+                        >
+                          {DIET_LABELS[d]}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="field__hint">{person.name.trim()} must never eat</p>
                   <div className="chips">
                     {ALLERGEN_CHOICES.map((allergen) => {
                       const on = (answers.exclusions[index] ?? []).includes(allergen);

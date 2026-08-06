@@ -1041,6 +1041,21 @@ select:focus-visible {
   font-weight: 600;
 }
 
+/* A small badge riding a chip — e.g. a diet on a person's name. Borrows the
+   chip's current text colour so it reads in both the plain and selected states. */
+.chip__badge {
+  margin-left: 6px;
+  font-family: var(--data);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid;
+  opacity: 0.75;
+  vertical-align: middle;
+}
+
 /* "Missed" — a neutral filled state, neither the green of liked nor the red of
    disliked, because not eating a dish says nothing about it. */
 .chip--missed {
