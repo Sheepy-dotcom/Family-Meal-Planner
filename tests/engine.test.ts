@@ -19,6 +19,7 @@ import { SEED_HOUSEHOLD } from '../src/core/data/household.js';
 import { generatePlan, reroll } from '../src/core/planner/solver.js';
 import { checkFeasibility, checkVariety } from '../src/core/planner/feasibility.js';
 import { proposeRules, applyProposal, mealsMatchingProposal } from '../src/core/learning/feedback.js';
+import { weekPlanToText } from '../src/core/planner/share.js';
 import {
   suggestPlannedOvers,
   applyPlannedOver,
@@ -1839,6 +1840,32 @@ section('Acting on a proposal');
   const soloPlan = { ...plan, meals: [{ ...plan.meals[0], attendeeIds: ['p-katie'] }] };
   const scoped = mealsMatchingProposal(soloPlan, { ...base, kind: 'avoid-tag', subject: 'stir-fry', personId: 'p-jack' });
   check('a person-scoped proposal skips meals they are not at', scoped.length === 0);
+}
+
+// ---------------------------------------------------------------------------
+section('Sharing the week');
+{
+  const everyone = SEED_HOUSEHOLD.people.map((p) => p.id);
+  const plan = {
+    weekStartISO: '2026-08-03',
+    householdId: SEED_HOUSEHOLD.id,
+    seed: 1,
+    meals: [
+      { day: 0 as DayIndex, slot: 'dinner' as const, recipeId: 'beef-chilli', portions: 4, attendeeIds: everyone },
+      { day: 0 as DayIndex, slot: 'breakfast' as const, recipeId: 'porridge-berries', portions: 4, attendeeIds: everyone },
+    ],
+  };
+  const text = weekPlanToText(plan, 'Our week');
+  check('the share text carries the title', text.startsWith('Our week'));
+  check('it names the day', text.includes('MONDAY'));
+  check('it lists the dish', text.toLowerCase().includes('chilli'));
+  check('breakfast is listed before dinner', text.indexOf('breakfast') < text.indexOf('dinner'));
+
+  const withGhost = weekPlanToText({
+    ...plan,
+    meals: [{ day: 1 as DayIndex, slot: 'dinner' as const, recipeId: 'no-such-dish', portions: 4, attendeeIds: everyone }],
+  });
+  check('a since-deleted dish is skipped, not shown as an id', !withGhost.includes('no-such-dish'));
 }
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

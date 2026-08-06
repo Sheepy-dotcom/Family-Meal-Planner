@@ -49,6 +49,7 @@ import { analysePatterns } from '../core/learning/ai.js';
 import { suggestPlannedOvers, applyPlannedOver } from '../core/planner/leftovers.js';
 import { reconcilePlan, repairPlan } from '../core/planner/reconcile.js';
 import { dropOrphanedMeals, mealsUsing } from '../core/planner/integrity.js';
+import { weekPlanToText } from '../core/planner/share.js';
 import type { ReconcileResult } from '../core/planner/reconcile.js';
 import { SuggestionsPanel } from './components/SuggestionsPanel.js';
 import { OnboardingFlow } from './components/OnboardingFlow.js';
@@ -111,6 +112,7 @@ export default function App() {
   // A ref, not state: the stack mutates in place and shouldn't re-render on push.
   const undoStack = useRef(new UndoStack());
   const [undoLabel, setUndoLabel] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const [reading, setReading] = useState<PlannedMeal | null>(null);
   const [tab, setTab] = useState<Tab>('meals');
   // Today and Week share the Meals tab. Opens on Today — most sessions are
@@ -321,6 +323,32 @@ export default function App() {
     },
     [result],
   );
+
+  /**
+   * Share the week as plain text: the phone's native share sheet where it
+   * exists (so it can go straight to a message), and a clipboard copy as the
+   * fallback everywhere else.
+   */
+  const shareWeek = useCallback(async () => {
+    if (!result) return;
+    const text = weekPlanToText(result.plan, `Meals · week of ${formatWeek(weekStart)}`);
+    const nav = navigator as Navigator & { share?: (data: { title?: string; text?: string }) => Promise<void> };
+    if (nav.share) {
+      try {
+        await nav.share({ title: "This week's meals", text });
+        return;
+      } catch {
+        // Share sheet dismissed — fall through to a copy.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1500);
+    } catch {
+      // Clipboard blocked; nothing more we can do here.
+    }
+  }, [result, weekStart]);
 
   const proposals = useMemo(() => {
     const inferred = proposeRules(feedback, household).filter((p) => !dismissed.includes(p.id));
@@ -821,6 +849,11 @@ export default function App() {
           {tab === 'meals' && mealsView === 'week' && result && (
             <button className="btn" onClick={() => setReviewing(true)}>
               Mark as cooked
+            </button>
+          )}
+          {tab === 'meals' && mealsView === 'week' && result && (
+            <button className="btn" onClick={shareWeek}>
+              {shareCopied ? 'Copied' : 'Share week'}
             </button>
           )}
         </div>
