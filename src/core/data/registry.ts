@@ -1,5 +1,20 @@
 import { RECIPES as BUILT_IN } from './recipes.js';
+import { RECIPE_GUIDES } from './guides.js';
 import type { Recipe } from '../types.js';
+
+/**
+ * Attach a detailed guide from the guides file to any built-in recipe that
+ * doesn't already carry one inline. Kept here so every consumer of the registry
+ * — the recipe screen especially — sees guides without the catalogue file
+ * having to hold them all.
+ */
+function withGuide(recipe: Recipe): Recipe {
+  if (recipe.guide?.length) return recipe;
+  const guide = RECIPE_GUIDES[recipe.id];
+  return guide ? { ...recipe, guide } : recipe;
+}
+
+const BUILT_IN_GUIDED = BUILT_IN.map(withGuide);
 
 /**
  * The recipe registry.
@@ -15,11 +30,11 @@ import type { Recipe } from '../types.js';
  */
 
 let userRecipes: Recipe[] = [];
-let merged: Recipe[] = BUILT_IN;
-let index = new Map(BUILT_IN.map((r) => [r.id, r]));
+let merged: Recipe[] = BUILT_IN_GUIDED;
+let index = new Map(BUILT_IN_GUIDED.map((r) => [r.id, r]));
 
 function rebuild(): void {
-  const byId = new Map(BUILT_IN.map((r) => [r.id, r]));
+  const byId = new Map(BUILT_IN_GUIDED.map((r) => [r.id, r]));
   for (const recipe of userRecipes) byId.set(recipe.id, recipe);
   index = byId;
   merged = [...byId.values()];
