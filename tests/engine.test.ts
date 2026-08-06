@@ -18,7 +18,7 @@ import { dishVerdicts, favouritesFor } from '../src/core/learning/feedback.js';
 import { SEED_HOUSEHOLD } from '../src/core/data/household.js';
 import { generatePlan, reroll } from '../src/core/planner/solver.js';
 import { checkFeasibility, checkVariety } from '../src/core/planner/feasibility.js';
-import { proposeRules, applyProposal } from '../src/core/learning/feedback.js';
+import { proposeRules, applyProposal, mealsMatchingProposal } from '../src/core/learning/feedback.js';
 import {
   suggestPlannedOvers,
   applyPlannedOver,
@@ -1810,6 +1810,35 @@ section('Diets');
     history: [],
   };
   check('no diet set means no restriction', isAllowed(chicken, d, 'dinner', legacy));
+}
+
+// ---------------------------------------------------------------------------
+section('Acting on a proposal');
+{
+  const everyone = SEED_HOUSEHOLD.people.map((p) => p.id);
+  const plan = {
+    weekStartISO: '2026-08-03',
+    householdId: SEED_HOUSEHOLD.id,
+    seed: 1,
+    meals: [
+      { day: 0 as DayIndex, slot: 'dinner' as const, recipeId: 'satay-noodles', portions: 4, attendeeIds: everyone },
+      { day: 1 as DayIndex, slot: 'dinner' as const, recipeId: 'beef-chilli', portions: 4, attendeeIds: everyone },
+    ],
+  };
+  const base = { id: 'x', suggestion: '', evidence: '', strength: 1 } as const;
+
+  const thai = mealsMatchingProposal(plan, { ...base, kind: 'avoid-cuisine', subject: 'thai' });
+  check('avoid-cuisine matches only that cuisine', thai.length === 1 && thai[0].recipeId === 'satay-noodles');
+
+  const blocked = mealsMatchingProposal(plan, { ...base, kind: 'block-recipe', subject: 'beef-chilli' });
+  check('block-recipe matches that dish', blocked.length === 1 && blocked[0].recipeId === 'beef-chilli');
+
+  const favoured = mealsMatchingProposal(plan, { ...base, kind: 'favour-recipe', subject: 'beef-chilli' });
+  check('favour-recipe matches nothing to change', favoured.length === 0);
+
+  const soloPlan = { ...plan, meals: [{ ...plan.meals[0], attendeeIds: ['p-katie'] }] };
+  const scoped = mealsMatchingProposal(soloPlan, { ...base, kind: 'avoid-tag', subject: 'stir-fry', personId: 'p-jack' });
+  check('a person-scoped proposal skips meals they are not at', scoped.length === 0);
 }
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

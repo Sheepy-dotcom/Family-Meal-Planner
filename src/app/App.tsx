@@ -37,7 +37,13 @@ import {
   saveSyncVersion,
 } from '../store/persist.js';
 import { generateCode, normaliseCode, pull, push } from '../store/sync.js';
-import { proposeRules, applyProposal, favouritesFor, dishVerdicts } from '../core/learning/feedback.js';
+import {
+  proposeRules,
+  applyProposal,
+  favouritesFor,
+  dishVerdicts,
+  mealsMatchingProposal,
+} from '../core/learning/feedback.js';
 import type { RuleProposal } from '../core/learning/feedback.js';
 import { analysePatterns } from '../core/learning/ai.js';
 import { suggestPlannedOvers, applyPlannedOver } from '../core/planner/leftovers.js';
@@ -96,6 +102,12 @@ export default function App() {
   const [onboarded, setOnboarded] = useState(hasHousehold);
   const [reviewing, setReviewing] = useState(false);
   const [pendingFix, setPendingFix] = useState<ReconcileResult | null>(null);
+  // After accepting an avoid/block suggestion, the meals in this week it now
+  // argues against — offered as a one-tap reshape.
+  const [pendingReshape, setPendingReshape] = useState<{
+    proposal: RuleProposal;
+    affected: PlannedMeal[];
+  } | null>(null);
   // A ref, not state: the stack mutates in place and shouldn't re-render on push.
   const undoStack = useRef(new UndoStack());
   const [undoLabel, setUndoLabel] = useState<string | null>(null);
@@ -356,9 +368,43 @@ export default function App() {
       setHousehold(next);
       saveHousehold(next);
       setDismissed(dismissProposal(proposal.id));
+      // The rule is in force from next week. If this week's plan already breaks
+      // it, offer to bring the current week into line too.
+      const affected = result ? mealsMatchingProposal(result.plan, proposal) : [];
+      setPendingReshape(affected.length > 0 ? { proposal, affected } : null);
     },
-    [household, checkpoint],
+    [household, result, checkpoint],
   );
+
+  /**
+   * Re-roll only the slots an accepted preference argues against. The engine
+   * picks each replacement, so every new meal still passes the hard rules (and
+   * now the new preference too) — the suggestion changed the rules, the solver
+   * still chooses the dish.
+   */
+  const reshapeWeek = useCallback(() => {
+    if (!result || !pendingReshape) return;
+    checkpoint('updating this week to match');
+    let plan = result.plan;
+    for (const meal of pendingReshape.affected) {
+      // Skip a slot already changed out from under us.
+      if (
+        !plan.meals.some(
+          (m) => m.day === meal.day && m.slot === meal.slot && m.recipeId === meal.recipeId,
+        )
+      ) {
+        continue;
+      }
+      plan = reroll(plan, { day: meal.day, slot: meal.slot }, ctx).plan;
+    }
+    setResult({
+      plan,
+      evaluation: evaluatePlan(plan.meals, ctx),
+      unfilled: result.unfilled,
+    });
+    savePlan(plan);
+    setPendingReshape(null);
+  }, [result, pendingReshape, ctx, checkpoint]);
 
   const applyCarry = useCallback(
     (suggestion: (typeof plannedOvers)[number]) => {
@@ -814,6 +860,26 @@ export default function App() {
 
           {mealsView === 'week' && (
             <>
+              {pendingReshape && (
+                <div className="status" style={{ marginTop: 24 }}>
+                  <h3>Bring this week in line?</h3>
+                  <p>
+                    Accepting that affects {pendingReshape.affected.length} meal
+                    {pendingReshape.affected.length === 1 ? '' : 's'} already planned this
+                    week. Update {pendingReshape.affected.length === 1 ? 'it' : 'them'} to
+                    match, or leave the week as it is.
+                  </p>
+                  <div className="actions" style={{ marginTop: 12 }}>
+                    <button className="btn btn--primary" onClick={reshapeWeek}>
+                      Update this week
+                    </button>
+                    <button className="btn btn--ghost" onClick={() => setPendingReshape(null)}>
+                      Leave it
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {pendingFix && (
                 <div className="warn" style={{ marginTop: 24 }}>
                   <h3>That changed a few things</h3>
