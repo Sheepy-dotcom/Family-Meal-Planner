@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { ALLERGENS, ALLERGEN_LABELS } from '../../core/data/allergens.js';
 import { checkFeasibility, checkVariety } from '../../core/planner/feasibility.js';
 import { GOAL_LABELS, GOAL_HINTS, canSetGoal } from '../../core/people/goals.js';
+import { DIETS, DIET_LABELS, DIET_HINTS } from '../../core/people/diet.js';
 import { DAYS, DAY_NAMES } from '../../core/rules/context.js';
 import type { RuleContext } from '../../core/rules/context.js';
 import type {
@@ -209,6 +210,46 @@ export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , v
                   }
                 />
               </label>
+            </div>
+
+            <p className="field__hint">{person.name || 'This person'}'s diet</p>
+            <div className="chips">
+              {DIETS.map((d) => {
+                const on = (person.dietary.diet ?? 'omnivore') === d;
+                return (
+                  <button
+                    key={d}
+                    className={`chip ${on ? 'chip--in' : ''}`}
+                    aria-pressed={on}
+                    onClick={() =>
+                      updatePerson(person.id, {
+                        dietary: { ...person.dietary, diet: d },
+                      })
+                    }
+                  >
+                    {DIET_LABELS[d]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="goal-hint">{DIET_HINTS[person.dietary.diet ?? 'omnivore']}</p>
+
+            {/* Coeliac isn't a diet, it's a gluten exclusion — offered here as a
+                plain shortcut that sets the same gluten allergen as the list
+                below, so the two always agree. */}
+            <div className="chips" style={{ marginTop: 8 }}>
+              {(() => {
+                const coeliac = person.dietary.avoidAllergens.includes('gluten');
+                return (
+                  <button
+                    className={`chip ${coeliac ? 'chip--on' : ''}`}
+                    aria-pressed={coeliac}
+                    onClick={() => toggleAllergen(person, 'gluten')}
+                  >
+                    Coeliac · gluten-free
+                  </button>
+                );
+              })()}
             </div>
 
             {/* Goals are adults-only by design — a child should never be shown

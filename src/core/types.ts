@@ -205,12 +205,27 @@ export interface Recipe {
 
 export type AgeBand = 'child' | 'teen' | 'adult';
 
+/**
+ * What a person eats, on the animal-products axis. A single choice per person,
+ * enforced as a hard rule: a vegan is never offered a dish containing chicken,
+ * a vegetarian never fish, and so on. `omnivore` is the unrestricted default.
+ *
+ * Coeliac / gluten-free isn't on this axis — it's an allergen (`gluten`), so it
+ * lives in `avoidAllergens` and the settings screen offers it as a shortcut.
+ */
+export type Diet = 'omnivore' | 'pescatarian' | 'vegetarian' | 'vegan';
+
 export interface DietaryProfile {
   /**
    * Hard exclusions. A meal containing any of these is never offered to a
    * person present at that meal. Advisory in the UI, absolute in the solver.
    */
   avoidAllergens: Allergen[];
+  /**
+   * The person's diet. Optional for backwards compatibility — absent means
+   * `omnivore`, i.e. no restriction.
+   */
+  diet?: Diet;
   /** Ingredient ids this person won't eat. Preference, not safety. */
   dislikedIngredients: string[];
   /** Recipe tags to steer away from. */
