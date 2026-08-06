@@ -1940,19 +1940,9 @@ select {
   transition: color var(--speed) var(--ease);
 }
 
-/* A short accent bar rides the top edge of the active tab — the affordance
-   both platforms use to say "you are here" without shouting. */
-.tabbar__tab--on::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 28px;
-  height: 3px;
-  border-radius: 0 0 3px 3px;
-  background: var(--accent);
-}
+/* The active tab is marked by a soft rounded chip behind its icon (defined on
+   .tabbar__icon below) — a calmer, more current "you are here" than a hard top
+   bar, and it reads at a glance on a crowded home screen. */
 
 .tabbar__tab--on {
   color: var(--accent);
@@ -1965,13 +1955,23 @@ select {
 
 .tabbar__icon {
   position: relative;
-  font-size: 19px;
-  line-height: 1;
-  transition: transform var(--speed) var(--ease);
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 30px;
+  border-radius: 999px;
+  transition: background var(--speed) var(--ease), transform var(--speed) var(--ease);
+}
+
+.tabbar__icon svg {
+  width: 23px;
+  height: 23px;
+  display: block;
 }
 
 .tabbar__tab--on .tabbar__icon {
-  transform: translateY(-1px) scale(1.06);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
 }
 
 .tabbar__label {
@@ -1998,8 +1998,8 @@ select {
 /* A count rather than a dot: "23" tells you the shop is big, a dot doesn't. */
 .tabbar__badge {
   position: absolute;
-  top: -6px;
-  left: 12px;
+  top: -3px;
+  right: 4px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
