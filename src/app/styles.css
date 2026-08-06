@@ -237,7 +237,16 @@ select:focus-visible {
   justify-content: space-between;
   gap: calc(var(--step) * 4);
   padding-bottom: calc(var(--step) * 4);
-  border-bottom: 2px solid var(--text);
+  border-bottom: 1.5px solid transparent;
+  /* A hairline that starts in the accent and fades out — a more refined rule
+     than a hard black bar, and it ties the section dividers to the palette. */
+  border-image: linear-gradient(
+      90deg,
+      var(--accent) 0%,
+      var(--border-strong) 42%,
+      transparent 100%
+    )
+    1;
 }
 
 .masthead h1 {
@@ -2571,7 +2580,16 @@ select {
 .rules {
   margin-bottom: calc(var(--step) * 10);
   padding-bottom: calc(var(--step) * 8);
-  border-bottom: 2px solid var(--text);
+  border-bottom: 1.5px solid transparent;
+  /* A hairline that starts in the accent and fades out — a more refined rule
+     than a hard black bar, and it ties the section dividers to the palette. */
+  border-image: linear-gradient(
+      90deg,
+      var(--accent) 0%,
+      var(--border-strong) 42%,
+      transparent 100%
+    )
+    1;
 }
 
 .panel-title {
