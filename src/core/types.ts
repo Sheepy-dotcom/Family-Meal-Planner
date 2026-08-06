@@ -184,6 +184,13 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   method: string[];
   /**
+   * A fuller, beginner-friendly walkthrough — the same dish as `method`, told
+   * in more detail with the cues and timings a confident cook takes for
+   * granted. Optional: when present, the recipe screen offers it behind a
+   * "detailed guide" toggle; when absent, only the concise method shows.
+   */
+  guide?: string[];
+  /**
    * Sub-style for rules that care about variety within a family of dishes,
    * e.g. pasta sauces that shouldn't repeat inside a fortnight.
    */

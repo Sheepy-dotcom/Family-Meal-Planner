@@ -40,6 +40,7 @@ export function RecipeView({ meal, plan, ctx, verdictOf, onRate, onClose, onSwap
   const dialogRef = useModal(onClose);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [gathered, setGathered] = useState<Set<string>>(new Set());
+  const [showGuide, setShowGuide] = useState(false);
   const why = explainMeal(meal, plan, ctx).sentence;
   // Only the people who ate it get a say. Carried planned-overs were already
   // rated as their source cook, so they don't ask again.
@@ -178,6 +179,28 @@ export function RecipeView({ meal, plan, ctx, verdictOf, onRate, onClose, onSwap
               </li>
             ))}
           </ol>
+        )}
+
+        {/* A fuller walkthrough for anyone who wants the detail — hidden by
+            default so a confident cook isn't slowed by it, one tap away for
+            anyone who isn't. Only shown when the recipe carries a guide. */}
+        {scaled.recipe.guide && scaled.recipe.guide.length > 0 && (
+          <div className="cook__guide">
+            <button
+              className="btn btn--ghost cook__guide-toggle"
+              onClick={() => setShowGuide((v) => !v)}
+              aria-expanded={showGuide}
+            >
+              {showGuide ? 'Hide detailed guide' : 'Show detailed guide'}
+            </button>
+            {showGuide && (
+              <ol className="cook__guide-steps">
+                {scaled.recipe.guide.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
+              </ol>
+            )}
+          </div>
         )}
 
         {/* Just finished cooking — the moment an opinion is most likely to exist. */}

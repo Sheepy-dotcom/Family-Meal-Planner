@@ -1518,6 +1518,46 @@ select {
   color: var(--text-dim);
 }
 
+/* The detailed guide sits under the quick steps, opened on demand. */
+.cook__guide {
+  margin-top: calc(var(--step) * 4);
+}
+
+.cook__guide-toggle {
+  width: 100%;
+  text-align: center;
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--accent);
+}
+
+.cook__guide-toggle:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--on-accent);
+}
+
+.cook__guide-steps {
+  margin: calc(var(--step) * 3) 0 0;
+  padding-left: calc(var(--step) * 5);
+  display: grid;
+  gap: calc(var(--step) * 2.5);
+}
+
+.cook__guide-steps li {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  padding-left: calc(var(--step) * 1);
+}
+
+.cook__guide-steps li::marker {
+  color: var(--accent);
+  font-family: var(--data);
+  font-weight: 700;
+}
+
 .cook__ingredients,
 .cook__steps {
   list-style: none;
