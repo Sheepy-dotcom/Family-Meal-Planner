@@ -8,6 +8,8 @@ import type { Household, MealPlan } from '../../core/types.js';
 interface Props {
   plan: MealPlan;
   household: Household;
+  /** Verdicts already captured in the week, so rated dishes drop out. */
+  feedback: FeedbackEvent[];
   onFinish: (events: FeedbackEvent[]) => void;
   onSkip: () => void;
 }
@@ -28,7 +30,7 @@ type Verdicts = Record<string, Verdict | undefined>;
  * it means fine, unremarkable, cook it again — and forcing a rating on every
  * dish would flood the inference with noise that means nothing.
  */
-export function CookedReview({ plan, household, onFinish, onSkip }: Props) {
+export function CookedReview({ plan, household, feedback, onFinish, onSkip }: Props) {
   const dialogRef = useModal(onSkip);
   const [verdicts, setVerdicts] = useState<Verdicts>({});
 
@@ -37,6 +39,21 @@ export function CookedReview({ plan, household, onFinish, onSkip }: Props) {
     .filter((m) => m.source !== 'planned-over')
     .filter((m, i, all) => all.findIndex((o) => o.recipeId === m.recipeId) === i)
     .sort((a, b) => a.day - b.day);
+
+  // Verdicts already captured this week — one tap on Today or in a recipe.
+  const alreadyRated = new Set(
+    feedback
+      .filter((e) => e.personId && (e.type === 'liked' || e.type === 'disliked'))
+      .map((e) => `${e.recipeId}:${e.personId}`),
+  );
+
+  // The review is a catch-up: show only dishes with a diner still unrated, so it
+  // shrinks to nothing when people rate as they go.
+  const unrated = cooked.filter((meal) =>
+    household.people
+      .filter((p) => meal.attendeeIds.includes(p.id))
+      .some((p) => !alreadyRated.has(`${meal.recipeId}:${p.id}`)),
+  );
 
   function setVerdict(recipeId: string, personId: string, verdict: Verdict) {
     const key = `${recipeId}:${personId}`;
@@ -48,8 +65,7 @@ export function CookedReview({ plan, household, onFinish, onSkip }: Props) {
 
   function finish() {
     const at = new Date().toISOString();
-    const attendanceOf = (recipeId: string) =>
-      cooked.find((m) => m.recipeId === recipeId)?.attendeeIds;
+    const placeOf = (recipeId: string) => cooked.find((m) => m.recipeId === recipeId);
 
     const events: FeedbackEvent[] = [
       ...cooked.map((m) => ({
@@ -57,17 +73,22 @@ export function CookedReview({ plan, household, onFinish, onSkip }: Props) {
         recipeId: m.recipeId,
         at,
         attendeeIds: m.attendeeIds,
+        day: m.day,
+        slot: m.slot,
       })),
       ...Object.entries(verdicts)
         .filter(([, v]) => v)
         .map(([key, v]) => {
           const [recipeId, personId] = key.split(':');
+          const place = placeOf(recipeId);
           return {
             type: v as Verdict,
             recipeId,
             at,
             personId,
-            attendeeIds: attendanceOf(recipeId),
+            attendeeIds: place?.attendeeIds,
+            day: place?.day,
+            slot: place?.slot,
           };
         }),
     ];
@@ -91,13 +112,14 @@ export function CookedReview({ plan, household, onFinish, onSkip }: Props) {
           <div>
             <h2>How was the week?</h2>
             <p className="meal__meta">
-              Mark anything that stood out. Skipping a dish is fine — it just means
-              it was fine.
+              {unrated.length === 0
+                ? 'Everything was rated as you went — nothing to catch up on.'
+                : 'Anything you rated during the week is already in. Mark what stood out from the rest — skipping a dish is fine.'}
             </p>
           </div>
         </div>
 
-        {cooked.map((meal) => {
+        {unrated.map((meal) => {
           const recipe = getRecipe(meal.recipeId);
           // Only the people who actually ate it get a say.
           const diners = household.people.filter((p) => meal.attendeeIds.includes(p.id));

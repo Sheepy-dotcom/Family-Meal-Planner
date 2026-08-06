@@ -1,19 +1,20 @@
-export type Tab = 'week' | 'shop' | 'people' | 'recipes' | 'settings';
+export type Tab = 'meals' | 'shop' | 'people' | 'recipes' | 'settings';
 
 /**
  * Bottom navigation.
  *
  * A "More" menu at the top of the screen is a web pattern: it hides features
  * behind a click, and on a phone it sits at the far end of the thumb's reach.
- * Five labelled tabs at the bottom mean every part of the app is one tap away
- * and visible without exploring — which is what "where is the profile section?"
+ * Labelled tabs at the bottom mean every part of the app is one tap away and
+ * visible without exploring — which is what "where is the profile section?"
  * turned out to be about.
  *
- * Five is the practical ceiling. A sixth makes the labels illegible at phone
- * widths, and both platforms' own guidance stops here for the same reason.
+ * Five, not six: Today and Week are two views of the same thing, so they share
+ * one "Meals" tab with a segmented control. A sixth tab truncated its label and
+ * narrowed every target below a comfortable thumb on a small phone.
  */
 const TABS: Array<{ id: Tab; label: string; icon: string; needsPlan?: boolean }> = [
-  { id: 'week', label: 'Week', icon: '▤' },
+  { id: 'meals', label: 'Meals', icon: '▤' },
   { id: 'shop', label: 'Shop', icon: '▦', needsPlan: true },
   { id: 'people', label: 'People', icon: '◍', needsPlan: true },
   { id: 'recipes', label: 'Recipes', icon: '✎' },

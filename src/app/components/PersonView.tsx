@@ -13,6 +13,13 @@ interface Props {
   plan: MealPlan;
   ctx: RuleContext;
   feedback: FeedbackEvent[];
+  /** Weeks of cooked history — the AI reader unlocks at three. */
+  weeksOfHistory: number;
+  /** Ask the model to read the household's patterns. */
+  onAnalyse: () => void;
+  analysing: boolean;
+  /** A plain line about the last read: how many were added, or why none were. */
+  analysisStatus: string | null;
   onClose: () => void;
 }
 
@@ -27,7 +34,17 @@ interface Props {
  * The headline does the work here. If someone has had four dinners off one
  * dish, that sentence is the whole reason to open this screen.
  */
-export function PersonView({ plan, ctx, feedback, onClose , variant = 'sheet' }: Props) {
+export function PersonView({
+  plan,
+  ctx,
+  feedback,
+  weeksOfHistory,
+  onAnalyse,
+  analysing,
+  analysisStatus,
+  onClose,
+  variant = 'sheet',
+}: Props) {
   const dialogRef = useModal(onClose);
   const [selected, setSelected] = useState(ctx.household.people[0]?.id ?? '');
   const person = ctx.household.people.find((p) => p.id === selected);
@@ -96,30 +113,61 @@ export function PersonView({ plan, ctx, feedback, onClose , variant = 'sheet' }:
           </>
         )}
 
-        {profile.favourites.length > 0 && (
+        {(profile.favourites.length > 0 ||
+          profile.dislikes.length > 0 ||
+          profile.attributedSuggestions.length > 0) && (
           <>
-            <p className="eyebrow">{person.name} likes</p>
-            <div className="chips" style={{ marginBottom: 20 }}>
-              {profile.favourites.map((f) => (
-                <span className="chip chip--good" key={f.recipeId}>
-                  {f.name}
-                </span>
-              ))}
-            </div>
-          </>
-        )}
-
-        {profile.attributedSuggestions.length > 0 && (
-          <>
-            <p className="eyebrow">Noticed about {person.name}</p>
-            {profile.attributedSuggestions.map((s, i) => (
-              <div className="suggestion" key={i}>
-                <div>
-                  <p className="suggestion__text">{s.suggestion}</p>
-                  <p className="suggestion__evidence">{s.evidence}</p>
+            <p className="eyebrow">What we've learned</p>
+            <div className="learned">
+              {/* Stated facts: things this person actually said, one tap at a time. */}
+              {profile.favourites.length > 0 && (
+                <div className="learned__group">
+                  <p className="learned__label">
+                    Said they like <span className="learned__tag learned__tag--fact">stated</span>
+                  </p>
+                  <div className="chips">
+                    {profile.favourites.map((f) => (
+                      <span className="chip chip--good" key={f.recipeId}>
+                        {f.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )}
+
+              {profile.dislikes.length > 0 && (
+                <div className="learned__group">
+                  <p className="learned__label">
+                    Said no to <span className="learned__tag learned__tag--fact">stated</span>
+                  </p>
+                  <div className="chips">
+                    {profile.dislikes.map((d) => (
+                      <span className="chip chip--on" key={d.recipeId}>
+                        {d.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Inference: patterns the app has spotted but nobody has confirmed. */}
+              {profile.attributedSuggestions.length > 0 && (
+                <div className="learned__group">
+                  <p className="learned__label">
+                    A pattern we've spotted{' '}
+                    <span className="learned__tag learned__tag--guess">a guess</span>
+                  </p>
+                  {profile.attributedSuggestions.map((s, i) => (
+                    <div className="suggestion" key={i}>
+                      <div>
+                        <p className="suggestion__text">{s.suggestion}</p>
+                        <p className="suggestion__evidence">{s.evidence}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -173,6 +221,37 @@ export function PersonView({ plan, ctx, feedback, onClose , variant = 'sheet' }:
             Away for {profile.missed.length} planned meal
             {profile.missed.length === 1 ? '' : 's'} this week.
           </p>
+        )}
+
+        {/* Household-wide, not this person's: the model reads everyone's history
+            at once, looking for patterns the built-in rules can't phrase. */}
+        {weeksOfHistory >= 3 && (
+          <div className="noticed">
+            <p className="eyebrow">Across the whole household</p>
+            <div className="noticed__card">
+              <div>
+                <p className="suggestion__text">What we've noticed</p>
+                <p className="suggestion__evidence">
+                  Read {weeksOfHistory} weeks of choices for patterns the rules don't
+                  cover yet. Anything found arrives as a suggestion you can accept or
+                  ignore — nothing changes on its own.
+                </p>
+              </div>
+              <button
+                className="btn btn--primary"
+                onClick={onAnalyse}
+                disabled={analysing}
+                aria-busy={analysing}
+              >
+                {analysing ? 'Looking…' : 'What we’ve noticed'}
+              </button>
+            </div>
+            {analysisStatus && (
+              <p className="suggestion__evidence" style={{ marginTop: 8 }} role="status">
+                {analysisStatus}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </Shell>

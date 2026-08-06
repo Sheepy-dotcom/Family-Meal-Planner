@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { getRecipe } from '../../core/data/registry.js';
-import { DAY_NAMES, attendeesFor } from '../../core/rules/context.js';
+import { DAY_NAMES, SLOT_ORDER, attendeesFor } from '../../core/rules/context.js';
+import type { RuleContext } from '../../core/rules/context.js';
+import { explainMeal } from '../../core/planner/explain.js';
 import type {
   DayIndex,
   Household,
@@ -11,11 +14,11 @@ import type { SolveResult } from '../../core/planner/solver.js';
 import { AttendanceBar } from './AttendanceBar.js';
 
 const DAYS: DayIndex[] = [0, 1, 2, 3, 4, 5, 6];
-const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 interface Props {
   plan: MealPlan;
   household: Household;
+  ctx: RuleContext;
   unfilled: SolveResult['unfilled'];
   onSwap: (day: DayIndex, slot: MealSlot) => void;
   onToggleAttendance: (personId: string, day: DayIndex, slot: MealSlot) => void;
@@ -25,6 +28,7 @@ interface Props {
 export function WeekBoard({
   plan,
   household,
+  ctx,
   unfilled,
   onSwap,
   onToggleAttendance,
@@ -57,6 +61,8 @@ export function WeekBoard({
                   key={`${meal.day}-${meal.slot}`}
                   meal={meal}
                   household={household}
+                  plan={plan}
+                  ctx={ctx}
                   onSwap={onSwap}
                   onRead={onRead}
                 />
@@ -95,11 +101,15 @@ function DayNote({ day, household }: { day: DayIndex; household: Household }) {
 function Meal({
   meal,
   household,
+  plan,
+  ctx,
   onSwap,
   onRead,
 }: {
   meal: PlannedMeal;
   household: Household;
+  plan: MealPlan;
+  ctx: RuleContext;
   onSwap: (day: DayIndex, slot: MealSlot) => void;
   onRead: (meal: PlannedMeal) => void;
 }) {
@@ -107,6 +117,14 @@ function Meal({
   const attendees = attendeesFor(household, meal.day, meal.slot);
   const kidsOnly = attendees.length > 0 && !attendees.some((p) => p.ageBand === 'adult');
   const carried = meal.source === 'planned-over';
+  // Computed only when opened — the one-out analysis isn't worth running for
+  // every row on every render.
+  const [why, setWhy] = useState(false);
+  // Headcount at the table, shown on every meal. Distinct from portions, which
+  // is age-weighted (a child counts less than a whole one). Highlighted when
+  // it's short of the full household, since that's what explains a small cook.
+  const eating = attendees.length;
+  const everyoneIn = eating === household.people.length;
 
   return (
     <div className={`meal meal--${meal.slot}${carried ? ' meal--carried' : ''}`}>
@@ -127,13 +145,21 @@ function Meal({
             <span>{recipe.activeMinutes} min hands-on</span>
           )}
           <span>{meal.portions} portions</span>
+          <span className={`meal__eating${everyoneIn ? '' : ' meal__eating--some'}`}>
+            {eating} eating
+          </span>
           <span>{recipe.cuisine}</span>
           {recipe.isNew && <span className="badge badge--new">New</span>}
           {kidsOnly && <span className="badge badge--kids">Kids cooking</span>}
-          {attendees.length < household.people.length && !kidsOnly && (
-            <span className="badge badge--away">{attendees.length} eating</span>
-          )}
         </div>
+        <button
+          className="meal__why-toggle"
+          aria-expanded={why}
+          onClick={() => setWhy((v) => !v)}
+        >
+          {why ? 'Hide reason' : 'Why this?'}
+        </button>
+        {why && <p className="meal__why">{explainMeal(meal, plan, ctx).sentence}</p>}
       </div>
       <div className="actions">
         <button

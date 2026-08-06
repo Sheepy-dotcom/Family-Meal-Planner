@@ -2,7 +2,9 @@ import { getIngredient } from '../data/ingredients.js';
 import { getRecipe } from '../data/registry.js';
 import type {
   Cuisine,
+  DayIndex,
   Household,
+  MealSlot,
   ProteinClass,
   Recipe,
   RecipeTag,
@@ -51,6 +53,14 @@ export interface FeedbackEvent {
    * the two disagree.
    */
   personId?: string;
+  /**
+   * Where in the week this happened. The inference engine here doesn't use it —
+   * a household rule can't be conditioned on a weekday — but it's the context a
+   * pattern-reader needs to tell "curries get swapped on weeknights" from "we've
+   * gone off curry". Optional: events captured before this was recorded lack it.
+   */
+  day?: DayIndex;
+  slot?: MealSlot;
 }
 
 export type ProposalKind =

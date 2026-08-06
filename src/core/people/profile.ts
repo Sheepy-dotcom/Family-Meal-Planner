@@ -2,7 +2,7 @@ import { getIngredient } from '../data/ingredients.js';
 import { getRecipe } from '../data/registry.js';
 import { attendeesFor } from '../rules/context.js';
 import type { RuleContext } from '../rules/context.js';
-import { proposeRules, favouritesFor } from '../learning/feedback.js';
+import { proposeRules, favouritesFor, dishVerdicts } from '../learning/feedback.js';
 import type { FeedbackEvent } from '../learning/feedback.js';
 import type {
   Allergen,
@@ -74,6 +74,8 @@ export interface PersonProfile {
   attributedSuggestions: Array<{ suggestion: string; evidence: string }>;
   /** Dishes they have said they like. Stated only, never inferred. */
   favourites: Array<{ recipeId: string; name: string }>;
+  /** Dishes they have said no to. Stated only, never inferred. */
+  dislikes: Array<{ recipeId: string; name: string }>;
   /** Their eating goal, if they have one. Adults only. */
   goal?: string;
   /** A plain sentence for the top of the view. */
@@ -132,6 +134,16 @@ export function buildPersonProfile(
         return [];
       }
     }),
+    // Explicit dislikes, read off the same verdicts favourites come from.
+    dislikes: dishVerdicts(feedback, ctx.household)
+      .filter((v) => v.dislikedBy.includes(personId))
+      .flatMap((v) => {
+        try {
+          return [{ recipeId: v.recipeId, name: getRecipe(v.recipeId).name }];
+        } catch {
+          return [];
+        }
+      }),
     goal: person.ageBand === 'adult' ? person.goal : undefined,
     attributedSuggestions: proposeRules(feedback, ctx.household)
       .filter((p) => p.personId === personId)

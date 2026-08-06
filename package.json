@@ -11,7 +11,7 @@
     "ios": "npm run sync && npx cap open ios",
     "android": "npm run sync && npx cap open android",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/engine.test.ts && tsx tests/undo.test.ts",
+    "test": "tsx tests/engine.test.ts && tsx tests/undo.test.ts && tsx tests/today.test.ts && tsx tests/explain.test.ts && tsx tests/custom.test.ts && tsx tests/capture.test.ts && tsx tests/ai.test.ts",
     "plan": "tsx scripts/plan.ts"
   },
   "dependencies": {

@@ -281,7 +281,78 @@ export interface Household {
    * the rule engine stays a pure function of its context.
    */
   favouritesByPerson?: Record<string, string[]>;
+  /**
+   * Rules the household wrote itself, on top of the built-in ones. Stored as
+   * data and compiled into the same HardRule / SoftRule interfaces the engine
+   * already uses, so nothing downstream special-cases them.
+   */
+  customRules?: CustomRule[];
 }
+
+// ---------------------------------------------------------------------------
+// Household-authored rules
+// ---------------------------------------------------------------------------
+
+/**
+ * How firmly a rule holds. Hard rules are vetoes — a dish that breaks one is
+ * never placed. Soft rules are weighted preferences the plan tries to satisfy
+ * and reports on when it can't. The user picks, within what each rule kind can
+ * actually express (a weekly *minimum* can't be a per-dish veto, so those are
+ * soft-only).
+ */
+export type Enforcement = 'hard' | 'soft';
+
+interface CustomRuleBase {
+  id: string;
+  enforcement: Enforcement;
+  /** Weight when soft. Ignored when hard. */
+  weight?: number;
+}
+
+/** Never/rarely serve a protein or tag on given days at a given slot. */
+export interface AvoidRule extends CustomRuleBase {
+  kind: 'avoid';
+  proteins?: ProteinClass[];
+  tags?: RecipeTag[];
+  /** Days it applies to; empty means every day. */
+  days: DayIndex[];
+  /** Slots it applies to; empty means every planned slot. */
+  slots: MealSlot[];
+}
+
+/** A person gets one of these proteins at least N times a week. Soft-only. */
+export interface PersonProteinRule extends CustomRuleBase {
+  kind: 'person-protein';
+  personId: string;
+  proteins: ProteinClass[];
+  minPerWeek: number;
+}
+
+/** At least / at most N meals carrying a tag, across the week. */
+export interface TagCountRule extends CustomRuleBase {
+  kind: 'tag-count';
+  tag: RecipeTag;
+  bound: 'at-least' | 'at-most';
+  count: number;
+}
+
+/**
+ * Never repeat the same cuisine (or tag) on consecutive days. Watches the
+ * dinner run — the meal a household actually plans around, and the same slot
+ * the built-in cuisine-variety rule uses.
+ */
+export interface NoConsecutiveRule extends CustomRuleBase {
+  kind: 'no-consecutive';
+  by: 'cuisine' | 'tag';
+  /** Required when by === 'tag'. */
+  tag?: RecipeTag;
+}
+
+export type CustomRule =
+  | AvoidRule
+  | PersonProteinRule
+  | TagCountRule
+  | NoConsecutiveRule;
 
 // ---------------------------------------------------------------------------
 // Plans

@@ -7,6 +7,7 @@ import {
   ingredientIdsIn,
   type RuleContext,
 } from './context.js';
+import { compileHardRules } from './custom.js';
 
 /**
  * Hard rules are checked per candidate meal *before* it is ever placed, and
@@ -47,6 +48,14 @@ export interface HardRule {
   ): boolean;
   /** Explanation used when a pinned or user-chosen meal breaks the rule. */
   explain(recipe: Recipe, day: DayIndex, slot: MealSlot, ctx: RuleContext): string;
+  /**
+   * Optional positive framing for the explain feature: the constraint this
+   * rule places on a slot, phrased as a reason the chosen dish is here (e.g.
+   * "fish is off the menu at weekends"). Returns null when it doesn't bind that
+   * slot. Built-in rules are phrased in explain.ts; custom rules supply it here
+   * so they're surfaced with no special casing.
+   */
+  constraintClause?(day: DayIndex, slot: MealSlot, ctx: RuleContext): string | null;
 }
 
 /**
@@ -207,6 +216,7 @@ const blockedDishes: HardRule = {
   explain: (recipe) => `${recipe.name} has been retired from the rotation`,
 };
 
+/** The built-in hard rules every household starts with. */
 export const HARD_RULES: HardRule[] = [
   slotFit,
   blockedDishes,
@@ -219,6 +229,17 @@ export const HARD_RULES: HardRule[] = [
 ];
 
 /**
+ * The hard rules in force for a context: the built-ins plus whatever the
+ * household has authored. Every consumer — the solver, feasibility, explain —
+ * reads through this, so a user rule is indistinguishable from a built-in.
+ */
+export function hardRulesFor(ctx: RuleContext): HardRule[] {
+  const custom = ctx.household.customRules;
+  if (!custom || custom.length === 0) return HARD_RULES;
+  return [...HARD_RULES, ...compileHardRules(custom)];
+}
+
+/**
  * Can this dish be carried into this slot as a planned-over?
  * Checks only the rules that survive not being cooked again.
  */
@@ -228,9 +249,9 @@ export function isAllowedAsPlannedOver(
   slot: MealSlot,
   ctx: RuleContext,
 ): boolean {
-  return HARD_RULES.filter((r) => r.appliesToPlannedOvers !== false).every((rule) =>
-    rule.allows(recipe, day, slot, ctx),
-  );
+  return hardRulesFor(ctx)
+    .filter((r) => r.appliesToPlannedOvers !== false)
+    .every((rule) => rule.allows(recipe, day, slot, ctx));
 }
 
 /** Candidate filter used by the solver. */
@@ -241,19 +262,20 @@ export function isAllowed(
   ctx: RuleContext,
   placed?: PlannedMeal[],
 ): boolean {
-  return HARD_RULES.every((rule) => rule.allows(recipe, day, slot, ctx, placed));
+  return hardRulesFor(ctx).every((rule) => rule.allows(recipe, day, slot, ctx, placed));
 }
 
 /** Full-plan check. Should return empty for any solver-produced plan. */
 export function findViolations(meals: PlannedMeal[], ctx: RuleContext): RuleViolation[] {
   const out: RuleViolation[] = [];
+  const rules = hardRulesFor(ctx);
   for (const meal of meals) {
     const recipe = getRecipe(meal.recipeId);
     const others = meals.filter((m) => m !== meal);
     const applicable =
       meal.source === 'planned-over'
-        ? HARD_RULES.filter((r) => r.appliesToPlannedOvers !== false)
-        : HARD_RULES;
+        ? rules.filter((r) => r.appliesToPlannedOvers !== false)
+        : rules;
     for (const rule of applicable) {
       if (!rule.allows(recipe, meal.day, meal.slot, ctx, others)) {
         out.push({

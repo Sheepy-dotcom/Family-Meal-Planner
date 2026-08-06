@@ -26,8 +26,11 @@ import {
   saveUserRecipes,
   loadPantry,
   savePantry,
+  loadSessionId,
 } from '../store/persist.js';
-import { proposeRules, applyProposal, favouritesFor } from '../core/learning/feedback.js';
+import { proposeRules, applyProposal, favouritesFor, dishVerdicts } from '../core/learning/feedback.js';
+import type { RuleProposal } from '../core/learning/feedback.js';
+import { analysePatterns } from '../core/learning/ai.js';
 import { suggestPlannedOvers, applyPlannedOver } from '../core/planner/leftovers.js';
 import { reconcilePlan, repairPlan } from '../core/planner/reconcile.js';
 import { dropOrphanedMeals, mealsUsing } from '../core/planner/integrity.js';
@@ -51,10 +54,12 @@ import { weightsForLean } from '../core/onboarding/questions.js';
 import { DEFAULT_WEIGHTS } from '../core/rules/config.js';
 import { SEED_HOUSEHOLD } from '../core/data/household.js';
 import { WeekBoard } from './components/WeekBoard.js';
+import { Today } from './components/Today.js';
 import { RuleRail } from './components/RuleRail.js';
 import { ShoppingPanel } from './components/ShoppingPanel.js';
 import { SwapSheet } from './components/SwapSheet.js';
 import { HouseholdEditor } from './components/HouseholdEditor.js';
+import { RulesEditor } from './components/RulesEditor.js';
 import { checkFeasibility } from '../core/planner/feasibility.js';
 
 export default function App() {
@@ -64,6 +69,12 @@ export default function App() {
   const [swapping, setSwapping] = useState<{ day: DayIndex; slot: MealSlot } | null>(null);
   const [feedback, setFeedback] = useState(loadFeedback);
   const [dismissed, setDismissed] = useState(loadDismissed);
+  // Patterns the model has surfaced this session. They merge into the same
+  // suggestions list as the inferred ones and apply only when accepted.
+  const [aiProposals, setAiProposals] = useState<RuleProposal[]>([]);
+  const [analysing, setAnalysing] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string | null>(null);
+  const sessionId = useMemo(() => loadSessionId(), []);
   const [retailer, setRetailer] = useState(loadRetailer);
   const [onboarded, setOnboarded] = useState(hasHousehold);
   const [reviewing, setReviewing] = useState(false);
@@ -72,7 +83,10 @@ export default function App() {
   const undoStack = useRef(new UndoStack());
   const [undoLabel, setUndoLabel] = useState<string | null>(null);
   const [reading, setReading] = useState<PlannedMeal | null>(null);
-  const [tab, setTab] = useState<Tab>('week');
+  const [tab, setTab] = useState<Tab>('meals');
+  // Today and Week share the Meals tab. Opens on Today — most sessions are
+  // "what's for tonight", not a replan — and the choice sticks for the session.
+  const [mealsView, setMealsView] = useState<'today' | 'week'>('today');
   // Rolled to the current week on load, which wipes last week's ticks. Carrying
   // them forward is what makes inventory tracking go stale.
   const [pantry, setPantry] = useState(() => loadPantry());
@@ -175,11 +189,49 @@ export default function App() {
             recipeId,
             at: new Date().toISOString(),
             attendeeIds: attendeesFor(household, day, slot).map((p) => p.id),
+            day,
+            slot,
           },
         ]),
       );
     },
     [household],
+  );
+
+  /**
+   * A per-person verdict, captured the moment it's easy — a meal that's just
+   * been eaten, or a recipe just cooked. personId is set, which makes this the
+   * strongest signal the learning engine has: a stated fact, not an inference.
+   */
+  const rateMeal = useCallback(
+    (
+      recipeId: string,
+      personId: string,
+      verdict: 'liked' | 'disliked',
+      attendeeIds: string[],
+      day?: DayIndex,
+      slot?: MealSlot,
+    ) => {
+      setFeedback(
+        recordFeedback([
+          { type: verdict, recipeId, at: new Date().toISOString(), personId, attendeeIds, day, slot },
+        ]),
+      );
+    },
+    [],
+  );
+
+  // Current explicit verdicts, so a rating widget reads back its own state.
+  const verdicts = useMemo(() => dishVerdicts(feedback, household), [feedback, household]);
+  const verdictOf = useCallback(
+    (recipeId: string, personId: string): 'liked' | 'disliked' | undefined => {
+      const v = verdicts.find((x) => x.recipeId === recipeId);
+      if (!v) return undefined;
+      if (v.likedBy.includes(personId)) return 'liked';
+      if (v.dislikedBy.includes(personId)) return 'disliked';
+      return undefined;
+    },
+    [verdicts],
   );
 
   const swapMeal = useCallback(
@@ -240,11 +292,39 @@ export default function App() {
     [result],
   );
 
-  const proposals = useMemo(
-    () =>
-      proposeRules(feedback, household).filter((p) => !dismissed.includes(p.id)),
-    [feedback, household, dismissed],
-  );
+  const proposals = useMemo(() => {
+    const inferred = proposeRules(feedback, household).filter((p) => !dismissed.includes(p.id));
+    // AI-surfaced patterns lead — they were just asked for — and never double up
+    // with an inferred proposal that reached the same conclusion.
+    const ai = aiProposals.filter(
+      (p) => !dismissed.includes(p.id) && !inferred.some((q) => q.id === p.id),
+    );
+    return [...ai, ...inferred];
+  }, [feedback, household, dismissed, aiProposals]);
+
+  /**
+   * "What we've noticed" — ask the model to read the same anonymised history the
+   * rule engine sees and describe patterns the fixed vocabulary can't. Whatever
+   * comes back is vetted client-side and merged into the suggestions panel; it
+   * changes nothing until someone accepts it.
+   */
+  const analyseNoticed = useCallback(async () => {
+    setAnalysing(true);
+    setAiStatus(null);
+    const result = await analysePatterns(feedback, household, sessionId);
+    setAnalysing(false);
+    if (result.error) {
+      setAiStatus(result.error);
+      return;
+    }
+    const fresh = result.proposals.filter((p) => !dismissed.includes(p.id));
+    setAiProposals(fresh);
+    setAiStatus(
+      fresh.length === 0
+        ? 'Nothing new — the rules already capture what we can see.'
+        : `${fresh.length} new suggestion${fresh.length === 1 ? '' : 's'} added to the panel on the Meals tab.`,
+    );
+  }, [feedback, household, sessionId, dismissed]);
 
   const plannedOvers = useMemo(
     () => (result ? suggestPlannedOvers(result.plan, ctx) : []),
@@ -277,12 +357,38 @@ export default function App() {
     [result, ctx],
   );
 
+  /**
+   * Any settings change — a person, a time budget, an added rule — is
+   * reconciled against the current plan the same way a swap or an attendance
+   * toggle is. Portions and attendance are corrected, a meal a new rule has
+   * broken is surfaced rather than left silently illegal, and the evaluation is
+   * always recomputed so the rule rail reflects the change instead of lagging a
+   * plan behind. The plan is only re-saved when it actually moved.
+   */
   const changeHousehold = useCallback(
     (next: typeof household) => {
       setHousehold(next);
       saveHousehold(next);
+      if (!result) return;
+
+      const nextCtx = { household: next, history };
+      const reconciled = reconcilePlan(result.plan, nextCtx);
+      const planChanged =
+        reconciled.plan.meals.length !== result.plan.meals.length ||
+        reconciled.plan.meals.some((m, i) => m !== result.plan.meals[i]);
+      const plan = planChanged ? reconciled.plan : result.plan;
+
+      setResult({
+        plan,
+        evaluation: evaluatePlan(plan.meals, nextCtx),
+        unfilled: result.unfilled,
+      });
+      if (planChanged) savePlan(plan);
+      setPendingFix(
+        reconciled.broken.length > 0 || reconciled.emptied.length > 0 ? reconciled : null,
+      );
     },
-    [],
+    [result, history],
   );
 
   /**
@@ -405,11 +511,12 @@ export default function App() {
     if (reading) return setReading(null), true;
     if (swapping) return setSwapping(null), true;
     if (reviewing) return setReviewing(false), true;
-    // From any other tab, back returns to the week rather than leaving — the
-    // same behaviour as a native app's root tab.
-    if (tab !== 'week') return setTab('week'), true;
+    // Innermost first: another tab returns to Meals, the Week view returns to
+    // Today, and Today (the root) is the only place back finally exits.
+    if (tab !== 'meals') return setTab('meals'), true;
+    if (mealsView !== 'today') return setMealsView('today'), true;
     return false;
-  }, [reading, swapping, reviewing, tab]);
+  }, [reading, swapping, reviewing, tab, mealsView]);
 
   useBackButton(handleBack);
 
@@ -449,7 +556,13 @@ export default function App() {
     <div className="shell">
       <header className="masthead">
         <div>
-          <h1>{TAB_TITLES[tab](formatWeek(weekStart))}</h1>
+          <h1>
+            {tab === 'meals'
+              ? mealsView === 'today'
+                ? 'Today'
+                : `Week of ${formatWeek(weekStart)}`
+              : SECTION_TITLES[tab]}
+          </h1>
           <p className="dateline">
             {household.name} · {household.people.length} people ·{' '}
             {history.length} week{history.length === 1 ? '' : 's'} of history
@@ -461,12 +574,12 @@ export default function App() {
               Undo {undoLabel}
             </button>
           )}
-          {tab === 'week' && (
+          {tab === 'meals' && mealsView === 'week' && (
             <button className="btn btn--primary" onClick={() => plan(Date.now() % 100000)}>
               {result ? 'Plan again' : 'Plan the week'}
             </button>
           )}
-          {tab === 'week' && result && (
+          {tab === 'meals' && mealsView === 'week' && result && (
             <button className="btn" onClick={() => setReviewing(true)}>
               Mark as cooked
             </button>
@@ -474,93 +587,120 @@ export default function App() {
         </div>
       </header>
 
-      {!feasibility.ok && (
-        <div className="warn" style={{ marginTop: 24 }}>
-          <h3>Some slots can't be filled</h3>
-          <ul>
-            {feasibility.impossible.slice(0, 4).map((s) => (
-              <li key={`${s.day}-${s.slot}`}>{s.message}</li>
-            ))}
-          </ul>
-          <p>Open Household to relax a rule, or add recipes that fit.</p>
-        </div>
-      )}
-
-      {pendingFix && tab === 'week' && (
-        <div className="warn" style={{ marginTop: 24 }}>
-          <h3>That changed a few things</h3>
-          <ul>
-            {pendingFix.broken.map((v, i) => (
-              <li key={i}>{v.message}</li>
-            ))}
-            {pendingFix.emptied.map((e) => (
-              <li key={`${e.day}-${e.slot}`}>
-                Nobody's eating {DAY_NAMES[e.day]} {e.slot} any more, so it's been
-                dropped.
-              </li>
-            ))}
-          </ul>
-          <div className="actions" style={{ marginTop: 12 }}>
-            {pendingFix.broken.length > 0 && (
-              <button className="btn" onClick={applyRepair}>
-                Fix just those meals
-              </button>
-            )}
-            <button className="btn btn--ghost" onClick={() => setPendingFix(null)}>
-              Leave it
+      {tab === 'meals' && (
+        <>
+          <div className="seg" role="tablist" aria-label="Meals view">
+            <button
+              role="tab"
+              aria-selected={mealsView === 'today'}
+              className={`seg__btn ${mealsView === 'today' ? 'seg__btn--on' : ''}`}
+              onClick={() => setMealsView('today')}
+            >
+              Today
+            </button>
+            <button
+              role="tab"
+              aria-selected={mealsView === 'week'}
+              className={`seg__btn ${mealsView === 'week' ? 'seg__btn--on' : ''}`}
+              onClick={() => setMealsView('week')}
+            >
+              Week
             </button>
           </div>
-        </div>
-      )}
 
-      {!feasibility.ok && tab === 'week' && (
-        <div className="warn" style={{ marginTop: 24 }}>
-          <h3>Some slots can't be filled</h3>
-          <ul>
-            {feasibility.impossible.slice(0, 4).map((s) => (
-              <li key={`${s.day}-${s.slot}`}>{s.message}</li>
-            ))}
-          </ul>
-          <p>Open Settings to relax a rule, or add recipes that fit.</p>
-        </div>
-      )}
-
-      {tab === 'week' &&
-        (!result ? (
-          <div className="empty">
-            <h2 className="empty__title">Ready when you are</h2>
-            <p>
-              Press <strong>Plan the week</strong> and you'll get seven days of meals
-              that respect everything you've told me — who's eating, what they avoid,
-              and how long you've actually got on a weeknight.
-            </p>
-            <p className="empty__aside">
-              You can change any meal afterwards, and the shopping list updates with it.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="layout">
-              <WeekBoard
-                plan={result.plan}
-                household={household}
-                unfilled={result.unfilled}
-                onSwap={(day, slot) => setSwapping({ day, slot })}
-                onToggleAttendance={toggleAttendance}
-                onRead={setReading}
-              />
-              <RuleRail evaluation={result.evaluation} />
-            </div>
-
-            <SuggestionsPanel
-              proposals={proposals}
-              plannedOvers={plannedOvers}
-              onAccept={acceptProposal}
-              onDismiss={(p) => setDismissed(dismissProposal(p.id))}
-              onApplyPlannedOver={applyCarry}
+          {mealsView === 'today' && (
+            <Today
+              plan={result?.plan ?? null}
+              household={household}
+              onCook={setReading}
+              onGoToWeek={() => setMealsView('week')}
+              verdictOf={verdictOf}
+              onRate={rateMeal}
             />
-          </>
-        ))}
+          )}
+
+          {mealsView === 'week' && (
+            <>
+              {pendingFix && (
+                <div className="warn" style={{ marginTop: 24 }}>
+                  <h3>That changed a few things</h3>
+                  <ul>
+                    {pendingFix.broken.map((v, i) => (
+                      <li key={i}>{v.message}</li>
+                    ))}
+                    {pendingFix.emptied.map((e) => (
+                      <li key={`${e.day}-${e.slot}`}>
+                        Nobody's eating {DAY_NAMES[e.day]} {e.slot} any more, so it's
+                        been dropped.
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="actions" style={{ marginTop: 12 }}>
+                    {pendingFix.broken.length > 0 && (
+                      <button className="btn" onClick={applyRepair}>
+                        Fix just those meals
+                      </button>
+                    )}
+                    <button className="btn btn--ghost" onClick={() => setPendingFix(null)}>
+                      Leave it
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!feasibility.ok && (
+                <div className="warn" style={{ marginTop: 24 }}>
+                  <h3>Some slots can't be filled</h3>
+                  <ul>
+                    {feasibility.impossible.slice(0, 4).map((s) => (
+                      <li key={`${s.day}-${s.slot}`}>{s.message}</li>
+                    ))}
+                  </ul>
+                  <p>Open Settings to relax a rule, or add recipes that fit.</p>
+                </div>
+              )}
+
+              {!result ? (
+                <div className="empty">
+                  <h2 className="empty__title">Ready when you are</h2>
+                  <p>
+                    Press <strong>Plan the week</strong> and you'll get seven days of
+                    meals that respect everything you've told me — who's eating, what
+                    they avoid, and how long you've actually got on a weeknight.
+                  </p>
+                  <p className="empty__aside">
+                    You can change any meal afterwards, and the shopping list updates
+                    with it.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="layout">
+                    <WeekBoard
+                      plan={result.plan}
+                      household={household}
+                      ctx={ctx}
+                      unfilled={result.unfilled}
+                      onSwap={(day, slot) => setSwapping({ day, slot })}
+                      onToggleAttendance={toggleAttendance}
+                      onRead={setReading}
+                    />
+                    <RuleRail evaluation={result.evaluation} />
+                  </div>
+
+                  <SuggestionsPanel
+                    proposals={proposals}
+                    plannedOvers={plannedOvers}
+                    onAccept={acceptProposal}
+                    onDismiss={(p) => setDismissed(dismissProposal(p.id))}
+                    onApplyPlannedOver={applyCarry}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
 
       {tab === 'shop' &&
         (shopping ? (
@@ -591,7 +731,11 @@ export default function App() {
           plan={result.plan}
           ctx={ctx}
           feedback={feedback}
-          onClose={() => setTab('week')}
+          weeksOfHistory={history.length}
+          onAnalyse={analyseNoticed}
+          analysing={analysing}
+          analysisStatus={aiStatus}
+          onClose={() => setTab('meals')}
         />
       )}
 
@@ -600,26 +744,32 @@ export default function App() {
           variant="page"
           onSave={saveRecipe}
           onDelete={deleteRecipe}
-          onClose={() => setTab('week')}
+          onClose={() => setTab('meals')}
           usageOf={(id) => (result ? mealsUsing(result.plan, id).length : 0)}
         />
       )}
 
       {tab === 'settings' && (
-        <HouseholdEditor
-          variant="page"
-          household={household}
-          ctx={ctx}
-          onChange={changeHousehold}
-          onClose={() => setTab('week')}
-        />
+        <>
+          <RulesEditor household={household} ctx={ctx} onChange={changeHousehold} />
+          <HouseholdEditor
+            variant="page"
+            household={household}
+            ctx={ctx}
+            onChange={changeHousehold}
+            onClose={() => setTab('meals')}
+          />
+        </>
       )}
 
 
-      {reading && (
+      {reading && result && (
         <RecipeView
           meal={reading}
+          plan={result.plan}
           ctx={ctx}
+          verdictOf={verdictOf}
+          onRate={rateMeal}
           onClose={() => setReading(null)}
           onSwap={() => {
             setSwapping({ day: reading.day, slot: reading.slot });
@@ -643,6 +793,7 @@ export default function App() {
         <CookedReview
           plan={result.plan}
           household={household}
+          feedback={feedback}
           onFinish={finishWeek}
           onSkip={() => setReviewing(false)}
         />
@@ -668,12 +819,13 @@ export default function App() {
   );
 }
 
-const TAB_TITLES: Record<Tab, (week: string) => string> = {
-  week: (week) => `Week of ${week}`,
-  shop: () => 'Shopping list',
-  people: () => 'Who eats what',
-  recipes: () => 'Recipes',
-  settings: () => 'Household',
+// The Meals tab titles itself from its sub-view (Today / Week of …); the rest
+// are fixed section headings.
+const SECTION_TITLES: Record<Exclude<Tab, 'meals'>, string> = {
+  shop: 'Shopping list',
+  people: 'Who eats what',
+  recipes: 'Recipes',
+  settings: 'Household',
 };
 
 function mondayOf(date: Date): string {
