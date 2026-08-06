@@ -35,6 +35,9 @@ export const STORAGE_KEYS = [
   'mp.weights.v1',
   'mp.recipes.v1',
   'mp.pantry.v1',
+  'mp.session.v1',
+  'mp.sync.code.v1',
+  'mp.sync.version.v1',
 ] as const;
 
 const cache = new Map<string, string>();

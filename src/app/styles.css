@@ -971,6 +971,26 @@ select:focus-visible {
   background: var(--danger-soft);
 }
 
+.sync-code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--step) * 3);
+  margin-top: calc(var(--step) * 3);
+  padding: calc(var(--step) * 3) calc(var(--step) * 4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.sync-code__value {
+  font-family: var(--data);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
 .field-row {
   display: flex;
   gap: calc(var(--step) * 3);

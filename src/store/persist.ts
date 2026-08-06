@@ -28,7 +28,26 @@ const KEYS = {
   recipes: 'mp.recipes.v1',
   pantry: 'mp.pantry.v1',
   session: 'mp.session.v1',
+  syncCode: 'mp.sync.code.v1',
+  syncVersion: 'mp.sync.version.v1',
 } as const;
+
+/**
+ * The keys that make up a household's shared state — everything a second phone
+ * should see. Deliberately excludes the device-local session id and the sync
+ * bookkeeping itself: those identify *this* install, not the household.
+ */
+const SYNCABLE_KEYS: string[] = [
+  KEYS.household,
+  KEYS.plan,
+  KEYS.history,
+  KEYS.feedback,
+  KEYS.dismissed,
+  KEYS.retailer,
+  KEYS.weights,
+  KEYS.recipes,
+  KEYS.pantry,
+];
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -159,6 +178,57 @@ export function loadSessionId(): string {
       : `s-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
   write(KEYS.session, id);
   return id;
+}
+
+// ---------------------------------------------------------------------------
+// Cross-device sync
+// ---------------------------------------------------------------------------
+
+/** A raw snapshot of the shared state — the exact strings storage holds. */
+export function exportState(): Record<string, string> {
+  const blob: Record<string, string> = {};
+  for (const key of SYNCABLE_KEYS) {
+    const raw = readRaw(key);
+    if (raw != null) blob[key] = raw;
+  }
+  return blob;
+}
+
+/**
+ * Overwrite local shared state with a snapshot from another device. Only the
+ * known syncable keys are touched — a malformed or hostile blob can't plant
+ * arbitrary storage entries — and a key the snapshot omits is cleared locally,
+ * so both devices converge on exactly the same state.
+ */
+export function applyState(blob: Record<string, unknown>): void {
+  for (const key of SYNCABLE_KEYS) {
+    const value = blob[key];
+    if (typeof value === 'string') writeRaw(key, value);
+    else removeRaw(key);
+  }
+}
+
+export function loadSyncCode(): string | null {
+  return readRaw(KEYS.syncCode);
+}
+
+export function saveSyncCode(code: string): void {
+  writeRaw(KEYS.syncCode, code);
+}
+
+export function clearSyncCode(): void {
+  removeRaw(KEYS.syncCode);
+  removeRaw(KEYS.syncVersion);
+}
+
+export function loadSyncVersion(): number {
+  const raw = readRaw(KEYS.syncVersion);
+  const n = raw ? Number(raw) : 0;
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function saveSyncVersion(version: number): void {
+  writeRaw(KEYS.syncVersion, String(version));
 }
 
 export function clearAll(): void {

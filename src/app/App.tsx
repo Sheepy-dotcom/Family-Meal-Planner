@@ -28,7 +28,15 @@ import {
   savePantry,
   loadSessionId,
   clearAll,
+  exportState,
+  applyState,
+  loadSyncCode,
+  saveSyncCode,
+  clearSyncCode,
+  loadSyncVersion,
+  saveSyncVersion,
 } from '../store/persist.js';
+import { generateCode, normaliseCode, pull, push } from '../store/sync.js';
 import { proposeRules, applyProposal, favouritesFor, dishVerdicts } from '../core/learning/feedback.js';
 import type { RuleProposal } from '../core/learning/feedback.js';
 import { analysePatterns } from '../core/learning/ai.js';
@@ -61,6 +69,7 @@ import { ShoppingPanel } from './components/ShoppingPanel.js';
 import { SwapSheet } from './components/SwapSheet.js';
 import { HouseholdEditor } from './components/HouseholdEditor.js';
 import { RulesEditor } from './components/RulesEditor.js';
+import { SyncPanel } from './components/SyncPanel.js';
 import { checkFeasibility } from '../core/planner/feasibility.js';
 
 export default function App() {
@@ -76,6 +85,13 @@ export default function App() {
   const [analysing, setAnalysing] = useState(false);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
   const sessionId = useMemo(() => loadSessionId(), []);
+  // Cross-device sync. The code is null until the household opts in.
+  const [syncCode, setSyncCode] = useState<string | null>(loadSyncCode);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const syncVersion = useRef(loadSyncVersion());
+  // The last blob we successfully pushed, so a no-op change doesn't re-push.
+  const lastPushed = useRef<string>('');
   const [retailer, setRetailer] = useState(loadRetailer);
   const [onboarded, setOnboarded] = useState(hasHousehold);
   const [reviewing, setReviewing] = useState(false);
@@ -561,6 +577,166 @@ export default function App() {
     window.location.reload();
   }, []);
 
+  // --- cross-device sync -------------------------------------------------
+
+  /**
+   * After a synced-in blob overwrites storage, the in-memory React state is
+   * stale. Rather than thread every setter through the sync code, re-read the
+   * lot from storage in one place — the same shape the app boots with.
+   */
+  const reloadFromStorage = useCallback(() => {
+    setHousehold(loadHousehold());
+    setHistory(loadHistory());
+    setFeedback(loadFeedback());
+    setDismissed(loadDismissed());
+    setRetailer(loadRetailer());
+    setWeights(loadWeights() ?? DEFAULT_WEIGHTS);
+    const recipes = loadUserRecipes();
+    setUserRecipes(recipes);
+    setUserRecipeState(recipes);
+    setPantry(pantryForWeek(loadPantry(), weekStart));
+    const saved = loadPlan();
+    const nextCtx = { household: loadHousehold(), history: loadHistory() };
+    if (saved && saved.weekStartISO === weekStart) {
+      const safe = dropOrphanedMeals(saved);
+      setResult({ plan: safe, evaluation: evaluatePlan(safe.meals, nextCtx), unfilled: [] });
+    } else {
+      setResult(null);
+    }
+    setPendingFix(null);
+  }, [weekStart]);
+
+  const adopt = useCallback(
+    (remote: { version: number; blob: Record<string, string> }) => {
+      applyState(remote.blob);
+      syncVersion.current = remote.version;
+      saveSyncVersion(remote.version);
+      lastPushed.current = JSON.stringify(exportState());
+      reloadFromStorage();
+    },
+    [reloadFromStorage],
+  );
+
+  /** Push local state up, adopting the server's if it has moved on since. */
+  const pushNow = useCallback(async (code: string) => {
+    const blob = exportState();
+    const serialised = JSON.stringify(blob);
+    if (serialised === lastPushed.current) return; // nothing changed
+    const result = await push(code, blob, syncVersion.current);
+    if ('conflict' in result) {
+      adopt(result.current);
+    } else {
+      syncVersion.current = result.version;
+      saveSyncVersion(result.version);
+      lastPushed.current = serialised;
+    }
+  }, [adopt]);
+
+  const syncNow = useCallback(async () => {
+    if (!syncCode) return;
+    setSyncBusy(true);
+    setSyncStatus(null);
+    try {
+      const remote = await pull(syncCode);
+      if (remote && remote.version !== syncVersion.current) adopt(remote);
+      await pushNow(syncCode);
+      setSyncStatus('Up to date on this device.');
+    } catch {
+      setSyncStatus("Couldn't reach sync. Your data is safe on this device — try again later.");
+    } finally {
+      setSyncBusy(false);
+    }
+  }, [syncCode, adopt, pushNow]);
+
+  const createSync = useCallback(async () => {
+    const code = generateCode();
+    setSyncBusy(true);
+    setSyncStatus(null);
+    try {
+      // A brand-new code has no server state, so this first push seeds it.
+      syncVersion.current = 0;
+      lastPushed.current = '';
+      await pushNow(code);
+      saveSyncCode(code);
+      setSyncCode(code);
+      setSyncStatus('Sync is on. Share the code with another phone to join.');
+    } catch {
+      setSyncStatus("Couldn't set up sync just now. Try again later.");
+    } finally {
+      setSyncBusy(false);
+    }
+  }, [pushNow]);
+
+  const joinSync = useCallback(
+    async (input: string) => {
+      const code = normaliseCode(input);
+      if (!code) {
+        setSyncStatus('That code doesn’t look right — it’s like MEAL-7QK2Z.');
+        return;
+      }
+      if (
+        !window.confirm(
+          'Joining replaces this device’s plan and settings with the shared household’s. Continue?',
+        )
+      )
+        return;
+      setSyncBusy(true);
+      setSyncStatus(null);
+      try {
+        const remote = await pull(code);
+        if (!remote) {
+          setSyncStatus('No household found for that code. Check it and try again.');
+          return;
+        }
+        adopt(remote);
+        saveSyncCode(code);
+        setSyncCode(code);
+        setSyncStatus('Joined. This device now shares that household’s plan.');
+      } catch {
+        setSyncStatus("Couldn't reach sync. Try again later.");
+      } finally {
+        setSyncBusy(false);
+      }
+    },
+    [adopt],
+  );
+
+  const stopSync = useCallback(() => {
+    clearSyncCode();
+    setSyncCode(null);
+    syncVersion.current = 0;
+    lastPushed.current = '';
+    setSyncStatus('Sync is off. This device keeps its own copy from here.');
+  }, []);
+
+  // Pull once on boot if this device is part of a household.
+  useEffect(() => {
+    if (!syncCode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const remote = await pull(syncCode);
+        if (!cancelled && remote && remote.version !== syncVersion.current) adopt(remote);
+      } catch {
+        // Offline or the endpoint is down — the local copy stands in.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Boot-time pull only; later syncs are driven by the change effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced push whenever the shared state changes, if syncing is on.
+  useEffect(() => {
+    if (!syncCode) return;
+    const id = setTimeout(() => {
+      void pushNow(syncCode).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(id);
+  }, [syncCode, pushNow, household, history, feedback, dismissed, retailer, weights, userRecipes, pantry, result]);
+
   if (!onboarded) {
     return (
       <div className="shell">
@@ -769,6 +945,15 @@ export default function App() {
       {tab === 'settings' && (
         <>
           <RulesEditor household={household} ctx={ctx} onChange={changeHousehold} />
+          <SyncPanel
+            code={syncCode}
+            busy={syncBusy}
+            status={syncStatus}
+            onCreate={createSync}
+            onJoin={joinSync}
+            onSyncNow={syncNow}
+            onStop={stopSync}
+          />
           <HouseholdEditor
             variant="page"
             household={household}
