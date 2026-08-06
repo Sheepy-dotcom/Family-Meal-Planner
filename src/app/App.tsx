@@ -208,7 +208,7 @@ export default function App() {
     (
       recipeId: string,
       personId: string,
-      verdict: 'liked' | 'disliked',
+      verdict: 'liked' | 'disliked' | 'missed',
       attendeeIds: string[],
       day?: DayIndex,
       slot?: MealSlot,
@@ -225,11 +225,12 @@ export default function App() {
   // Current explicit verdicts, so a rating widget reads back its own state.
   const verdicts = useMemo(() => dishVerdicts(feedback, household), [feedback, household]);
   const verdictOf = useCallback(
-    (recipeId: string, personId: string): 'liked' | 'disliked' | undefined => {
+    (recipeId: string, personId: string): 'liked' | 'disliked' | 'missed' | undefined => {
       const v = verdicts.find((x) => x.recipeId === recipeId);
       if (!v) return undefined;
       if (v.likedBy.includes(personId)) return 'liked';
       if (v.dislikedBy.includes(personId)) return 'disliked';
+      if (v.missedBy.includes(personId)) return 'missed';
       return undefined;
     },
     [verdicts],
