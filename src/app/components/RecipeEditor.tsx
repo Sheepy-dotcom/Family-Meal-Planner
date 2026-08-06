@@ -56,7 +56,7 @@ const EMPTY: RecipeDraft = {
  * ones nobody would predict, and finding out at save time means retyping.
  */
 export function RecipeEditor({ onSave, onDelete, onClose, usageOf , variant = 'sheet' }: Props) {
-  const dialogRef = useModal(onClose);
+  const dialogRef = useModal(onClose, variant === 'sheet');
   const [draft, setDraft] = useState<RecipeDraft>(EMPTY);
   const [editingId, setEditingId] = useState<string | null>(null);
   // Deleting a recipe is not undoable and can pull a dish out from under the
