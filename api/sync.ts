@@ -48,9 +48,56 @@ async function kvSet(key: string, value: Stored): Promise<void> {
   if (!res.ok) throw new Error('kv-set-failed');
 }
 
+// --- rate limiting --------------------------------------------------------
+// The code is only 5 characters, so without a ceiling the codespace is small
+// enough to scan — and a hit returns a household's names and allergens. A
+// per-IP limit, counted in KV so it holds across serverless instances (an
+// in-memory counter wouldn't, since each cold start forgets), makes a sweep
+// cost far more than the data is worth while never getting in a real family's
+// way. Fail-open: if the counter itself errors, sync still works.
+const RATE_MAX = 40; // requests per IP per window — generous for real use
+const RATE_WINDOW_SEC = 60;
+
+function clientIp(req: any): string {
+  const fwd = req.headers?.['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.length > 0) return fwd.split(',')[0].trim();
+  return req.socket?.remoteAddress ?? 'unknown';
+}
+
+async function rateExceeded(ip: string, bucket: number): Promise<boolean> {
+  const key = `rl:sync:${ip}:${bucket}`;
+  try {
+    const res = await fetch(`${KV_URL}/incr/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${KV_TOKEN}` },
+    });
+    if (!res.ok) return false;
+    const body: any = await res.json();
+    const count = Number(body.result ?? 0);
+    // First hit in this window: set the key to expire so counters don't pile up.
+    if (count === 1) {
+      await fetch(`${KV_URL}/expire/${encodeURIComponent(key)}/${RATE_WINDOW_SEC}`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${KV_TOKEN}` },
+      });
+    }
+    return count > RATE_MAX;
+  } catch {
+    return false; // never let the limiter take the feature down
+  }
+}
+
 export default async function handler(req: any, res: any) {
   if (!KV_URL || !KV_TOKEN) {
     res.status(500).json({ error: 'Sync is not configured.' });
+    return;
+  }
+
+  // Bucketed per window; the timestamp comes from the server clock, which is
+  // fine here — this is coarse abuse control, not billing.
+  const bucket = Math.floor(Date.now() / (RATE_WINDOW_SEC * 1000));
+  if (await rateExceeded(clientIp(req), bucket)) {
+    res.status(429).json({ error: 'Too many requests. Try again in a minute.' });
     return;
   }
 
