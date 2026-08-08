@@ -4,7 +4,9 @@ import type {
   Cuisine,
   DayIndex,
   Household,
+  MealPlan,
   MealSlot,
+  PlannedMeal,
   ProteinClass,
   Recipe,
   RecipeTag,
@@ -363,6 +365,42 @@ export function proposeRules(
   }
 
   return proposals.sort((a, b) => b.strength - a.strength);
+}
+
+/**
+ * The meals in a plan that an accepted "avoid" or "block" proposal now argues
+ * against — the slots worth re-rolling so this week matches the new preference.
+ *
+ * A `favour-recipe` is additive (it prefers a dish, it doesn't reject any), so
+ * it matches nothing here. When a proposal is attributed to one person, only
+ * meals that person is actually at count — the rest of the table can still have
+ * the dish.
+ */
+export function mealsMatchingProposal(
+  plan: MealPlan,
+  proposal: RuleProposal,
+): PlannedMeal[] {
+  return plan.meals.filter((meal) => {
+    if (proposal.personId && !meal.attendeeIds.includes(proposal.personId)) return false;
+    let recipe: Recipe;
+    try {
+      recipe = getRecipe(meal.recipeId);
+    } catch {
+      return false;
+    }
+    switch (proposal.kind) {
+      case 'block-recipe':
+        return recipe.id === proposal.subject;
+      case 'avoid-cuisine':
+        return recipe.cuisine === proposal.subject;
+      case 'avoid-tag':
+        return recipe.tags.includes(proposal.subject as RecipeTag);
+      case 'avoid-ingredient':
+        return recipe.ingredients.some((ri) => ri.ingredientId === proposal.subject);
+      case 'favour-recipe':
+        return false;
+    }
+  });
 }
 
 /**
