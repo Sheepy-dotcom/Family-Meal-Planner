@@ -986,6 +986,86 @@ select:focus-visible {
   padding-top: calc(var(--step) * 3.5);
 }
 
+/* --- recipe library (browse) --------------------------------------------- */
+.lib__search {
+  width: 100%;
+  padding: calc(var(--step) * 3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--text);
+  font: inherit;
+  margin-bottom: calc(var(--step) * 3);
+}
+
+.lib {
+  display: grid;
+  gap: calc(var(--step) * 3);
+}
+
+.lib__card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: calc(var(--step) * 3.5);
+  box-shadow: var(--shadow-sm);
+}
+
+.lib__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--step) * 2);
+}
+
+.lib__name {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.lib__mine {
+  flex-shrink: 0;
+  font-family: var(--data);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.lib__meta {
+  margin: calc(var(--step) * 1.5) 0 0;
+  font-family: var(--data);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.lib__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--step) * 1.5);
+  margin-top: calc(var(--step) * 2.5);
+}
+
+.lib__tag {
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
 /* Per-person header: just holds the right-aligned Remove control. */
 .editor-block__head {
   display: flex;
