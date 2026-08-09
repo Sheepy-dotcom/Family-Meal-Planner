@@ -57,6 +57,7 @@ import { UndoStack } from '../store/undo.js';
 import { useBackButton, useStatusBar } from './useNative.js';
 import { TabBar, type Tab } from './components/TabBar.js';
 import { RecipeEditor } from './components/RecipeEditor.js';
+import { RecipeLibrary } from './components/RecipeLibrary.js';
 import { setUserRecipes } from '../core/data/registry.js';
 import {
   pantryForWeek,
@@ -118,6 +119,9 @@ export default function App() {
   // Today and Week share the Meals tab. Opens on Today — most sessions are
   // "what's for tonight", not a replan — and the choice sticks for the session.
   const [mealsView, setMealsView] = useState<'today' | 'week'>('today');
+  // The Recipes tab opens on the library — "what can it cook?" — with adding
+  // your own a tap away.
+  const [recipesView, setRecipesView] = useState<'browse' | 'add'>('browse');
   // Rolled to the current week on load, which wipes last week's ticks. Carrying
   // them forward is what makes inventory tracking go stale.
   const [pantry, setPantry] = useState(() => loadPantry());
@@ -1032,13 +1036,38 @@ export default function App() {
       )}
 
       {tab === 'recipes' && (
-        <RecipeEditor
-          variant="page"
-          onSave={saveRecipe}
-          onDelete={deleteRecipe}
-          onClose={() => setTab('meals')}
-          usageOf={(id) => (result ? mealsUsing(result.plan, id).length : 0)}
-        />
+        <>
+          <div className="seg" role="tablist" aria-label="Recipes view">
+            <button
+              role="tab"
+              aria-selected={recipesView === 'browse'}
+              className={`seg__btn ${recipesView === 'browse' ? 'seg__btn--on' : ''}`}
+              onClick={() => setRecipesView('browse')}
+            >
+              Browse
+            </button>
+            <button
+              role="tab"
+              aria-selected={recipesView === 'add'}
+              className={`seg__btn ${recipesView === 'add' ? 'seg__btn--on' : ''}`}
+              onClick={() => setRecipesView('add')}
+            >
+              Add your own
+            </button>
+          </div>
+
+          {recipesView === 'browse' ? (
+            <RecipeLibrary />
+          ) : (
+            <RecipeEditor
+              variant="page"
+              onSave={saveRecipe}
+              onDelete={deleteRecipe}
+              onClose={() => setTab('meals')}
+              usageOf={(id) => (result ? mealsUsing(result.plan, id).length : 0)}
+            />
+          )}
+        </>
       )}
 
       {tab === 'settings' && (
