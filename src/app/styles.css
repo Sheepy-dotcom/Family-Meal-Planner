@@ -919,6 +919,73 @@ select:focus-visible {
   background: var(--surface);
 }
 
+/* --- collapsible person cards (Settings) --------------------------------- */
+/* Each person is a tap-to-open card, so Settings reads as a short list first
+   and only unfolds the editor for the person you're actually changing. */
+.person-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.person-card--open {
+  box-shadow: var(--shadow-sm);
+}
+
+.person-card__head {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--step) * 3);
+  width: 100%;
+  min-height: 56px;
+  padding: calc(var(--step) * 3) calc(var(--step) * 3.5);
+  border: none;
+  background: none;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.person-card__name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.person-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--step) * 1.5);
+  flex: 1;
+  min-width: 0;
+}
+
+.person-card__tag {
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.person-card__chevron {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.person-card__body {
+  padding: 0 calc(var(--step) * 3.5) calc(var(--step) * 3.5);
+  border-top: 1px solid var(--border);
+  padding-top: calc(var(--step) * 3.5);
+}
+
 /* Per-person header: just holds the right-aligned Remove control. */
 .editor-block__head {
   display: flex;

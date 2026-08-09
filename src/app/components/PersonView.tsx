@@ -56,12 +56,16 @@ export function PersonView({
   return (
     <Shell variant={variant} dialogRef={dialogRef} onClose={onClose} label={"Who eats what"}>
       <div className="sheet sheet--wide" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__head">
-          <h2>Who eats what</h2>
-          <button className="btn btn--ghost" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        {/* On the tab the masthead already says "Who eats what"; only the sheet
+            needs its own heading and close control. */}
+        {variant === 'sheet' && (
+          <div className="sheet__head">
+            <h2>Who eats what</h2>
+            <button className="btn btn--ghost" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        )}
 
         <div className="chips" style={{ marginBottom: 20 }}>
           {ctx.household.people.map((p) => (
@@ -185,7 +189,7 @@ export function PersonView({
               {profile.meals.map((meal) => (
                 <div className="person__meal" key={`${meal.day}-${meal.slot}`}>
                   <span className="person__when">
-                    {DAY_NAMES[meal.day].slice(0, 3)} {meal.slot.slice(0, 5)}
+                    {DAY_NAMES[meal.day].slice(0, 3)} {meal.slot}
                   </span>
                   <span>
                     {meal.recipeName}

@@ -57,8 +57,8 @@ export function ShoppingPanel({
 
   return (
     <section className="panel">
-      <div className="masthead" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-        <h2>Shopping list</h2>
+      {/* The masthead already titles this tab — this row is just the controls. */}
+      <div className="masthead" style={{ borderBottom: 'none', paddingBottom: 0, justifyContent: 'flex-end' }}>
         <div className="actions">
           <select
             value={retailer}

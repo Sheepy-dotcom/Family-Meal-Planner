@@ -1,6 +1,6 @@
 import { Shell } from './Shell.js';
 import { useModal } from '../useModal.js';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { ALLERGENS, ALLERGEN_LABELS } from '../../core/data/allergens.js';
 import { checkFeasibility, checkVariety } from '../../core/planner/feasibility.js';
 import { GOAL_LABELS, GOAL_HINTS, canSetGoal } from '../../core/people/goals.js';
@@ -39,6 +39,10 @@ const EDITABLE_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner'];
  */
 export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , variant = 'sheet' }: Props) {
   const dialogRef = useModal(onClose, variant === 'sheet');
+  // People collapse into a summary row each, so Settings opens as a short,
+  // scannable list rather than four full editors stacked on top of each other.
+  // Null means all closed; one is open at a time.
+  const [openId, setOpenId] = useState<string | null>(null);
   const liveCtx: RuleContext = { ...ctx, household };
   const report = checkFeasibility(liveCtx);
   const varietyWarnings = checkVariety(liveCtx);
@@ -60,6 +64,7 @@ export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , v
       goal: 'balanced',
     };
     onChange({ ...household, people: [...household.people, person] });
+    setOpenId(person.id); // a fresh person opens ready to fill in
   }
 
   /**
@@ -124,12 +129,16 @@ export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , v
   return (
     <Shell variant={variant} dialogRef={dialogRef} onClose={onClose} label={"Household settings"}>
       <div className="sheet sheet--wide" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__head">
-          <h2>Household</h2>
-          <button className="btn btn--ghost" onClick={onClose}>
-            Done
-          </button>
-        </div>
+        {/* As a tab the masthead already names this screen; the heading only
+            earns its place when this is a pop-up sheet. */}
+        {variant === 'sheet' && (
+          <div className="sheet__head">
+            <h2>Household</h2>
+            <button className="btn btn--ghost" onClick={onClose}>
+              Done
+            </button>
+          </div>
+        )}
 
         {/* Live consequences, above everything else. */}
         <div className={report.ok && varietyWarnings.length === 0 ? 'status' : 'warn'}>
@@ -159,8 +168,39 @@ export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , v
 
         {/* --- people --- */}
         <p className="eyebrow">Who eats here</p>
-        {household.people.map((person) => (
-          <div className="editor-block" key={person.id}>
+        {household.people.map((person) => {
+          const open = openId === person.id;
+          const diet = person.dietary.diet;
+          const dietLabel = diet && diet !== 'omnivore' ? DIET_LABELS[diet] : null;
+          const glutenFree = person.dietary.avoidAllergens.includes('gluten');
+          const otherAllergens = person.dietary.avoidAllergens.filter((a) => a !== 'gluten').length;
+          const awayCount = household.absences.filter((a) => a.personId === person.id).length;
+          return (
+          <div className={`editor-block person-card ${open ? 'person-card--open' : ''}`} key={person.id}>
+            {/* Collapsed row: who they are at a glance, tap to edit. */}
+            <button
+              type="button"
+              className="person-card__head"
+              aria-expanded={open}
+              onClick={() => setOpenId(open ? null : person.id)}
+            >
+              <span className="person-card__name">{person.name.trim() || 'New person'}</span>
+              <span className="person-card__tags">
+                <span className="person-card__tag">{ageLabel(person.ageBand)}</span>
+                {dietLabel && <span className="person-card__tag">{dietLabel}</span>}
+                {glutenFree && <span className="person-card__tag">Gluten-free</span>}
+                {otherAllergens > 0 && (
+                  <span className="person-card__tag">
+                    {otherAllergens} allergen{otherAllergens === 1 ? '' : 's'}
+                  </span>
+                )}
+                {awayCount > 0 && <span className="person-card__tag">{awayCount} away</span>}
+              </span>
+              <span className="person-card__chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
+            </button>
+
+            {open && (
+            <div className="person-card__body">
             {household.people.length > 1 && (
               <div className="editor-block__head">
                 <button
@@ -327,8 +367,11 @@ export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , v
                 ),
               )}
             </div>
+            </div>
+            )}
           </div>
-        ))}
+          );
+        })}
 
         <button className="btn btn--ghost btn--addperson" onClick={addPerson}>
           + Add a person
@@ -389,4 +432,9 @@ export function HouseholdEditor({ household, ctx, onChange, onReset, onClose , v
       </div>
     </Shell>
   );
+}
+
+/** "adult" → "Adult", for the collapsed summary row. */
+function ageLabel(age: Person['ageBand']): string {
+  return age.charAt(0).toUpperCase() + age.slice(1);
 }
