@@ -59,6 +59,9 @@ export function RecipeEditor({ onSave, onDelete, onClose, usageOf , variant = 's
   const dialogRef = useModal(onClose, variant === 'sheet');
   const [draft, setDraft] = useState<RecipeDraft>(EMPTY);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Guidance about what's missing shouldn't shout at a blank form — it appears
+  // once someone has actually started filling the dish in.
+  const [touched, setTouched] = useState(false);
   // Deleting a recipe is not undoable and can pull a dish out from under the
   // current week, so it asks first. Confirming inline rather than with a
   // browser dialog keeps it dismissable by Escape like everything else.
@@ -70,6 +73,7 @@ export function RecipeEditor({ onSave, onDelete, onClose, usageOf , variant = 's
   const mine = allRecipes().filter((r) => isUserRecipe(r.id));
 
   function patch(next: Partial<RecipeDraft>) {
+    setTouched(true);
     setDraft((prev) => ({ ...prev, ...next }));
   }
 
@@ -85,22 +89,32 @@ export function RecipeEditor({ onSave, onDelete, onClose, usageOf , variant = 's
     onSave(finaliseRecipe({ ...draft, id: editingId ?? draft.id }));
     setDraft(EMPTY);
     setEditingId(null);
+    setTouched(false);
   }
 
   function edit(recipe: Recipe) {
     setDraft({ ...recipe });
     setEditingId(recipe.id);
+    setTouched(true); // an existing dish should surface any issues straight away
   }
 
   return (
     <Shell variant={variant} dialogRef={dialogRef} onClose={onClose} label={"Recipe editor"}>
       <div className="sheet sheet--wide" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__head">
-          <h2>{editingId ? 'Edit dish' : 'Add a dish'}</h2>
-          <button className="btn btn--ghost" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        {/* The masthead titles the tab; keep an in-panel heading only for the
+            pop-up sheet. As a tab, a plain lead-in sets the scene instead. */}
+        {variant === 'sheet' ? (
+          <div className="sheet__head">
+            <h2>{editingId ? 'Edit dish' : 'Add a dish'}</h2>
+            <button className="btn btn--ghost" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        ) : (
+          <p className="field__hint" style={{ marginTop: 0 }}>
+            {editingId ? 'Editing one of your dishes.' : 'Add your own dishes here — they join the ones the planner already knows.'}
+          </p>
+        )}
 
         <div className="editor-block">
           <div className="field-row">
@@ -313,8 +327,8 @@ export function RecipeEditor({ onSave, onDelete, onClose, usageOf , variant = 's
           </button>
         </div>
 
-        {/* --- live validation --- */}
-        {errors.length > 0 && (
+        {/* --- live validation (once they've started) --- */}
+        {touched && errors.length > 0 && (
           <div className="warn">
             <h3>Needs fixing</h3>
             <ul>
@@ -324,7 +338,7 @@ export function RecipeEditor({ onSave, onDelete, onClose, usageOf , variant = 's
             </ul>
           </div>
         )}
-        {errors.length === 0 && warnings.length > 0 && (
+        {touched && errors.length === 0 && warnings.length > 0 && (
           <div className="status">
             <h3>Worth a look</h3>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
