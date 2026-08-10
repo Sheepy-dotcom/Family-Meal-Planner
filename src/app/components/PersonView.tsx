@@ -2,6 +2,7 @@ import { Shell } from './Shell.js';
 import { useModal } from '../useModal.js';
 import { useState } from 'react';
 import { buildPersonProfile } from '../../core/people/profile.js';
+import { householdHappiness } from '../../core/people/happiness.js';
 import { DAY_NAMES } from '../../core/rules/context.js';
 import { DIET_LABELS } from '../../core/people/diet.js';
 import type { RuleContext } from '../../core/rules/context.js';
@@ -52,6 +53,7 @@ export function PersonView({
   if (!person) return null;
 
   const profile = buildPersonProfile(selected, plan, ctx, feedback);
+  const happiness = householdHappiness(feedback, ctx.household, plan);
 
   return (
     <Shell variant={variant} dialogRef={dialogRef} onClose={onClose} label={"Who eats what"}>
@@ -66,6 +68,35 @@ export function PersonView({
             </button>
           </div>
         )}
+
+        {/* The household glance: is each person actually getting a fair week?
+            Tapping a row drops into that person's detail below. */}
+        <div className="happy">
+          <p className="eyebrow" style={{ marginTop: 0 }}>
+            Is everyone happy?
+          </p>
+          <p className="happy__headline">{happiness.headline}</p>
+          <div className="happy__rows">
+            {happiness.people.map((h) => (
+              <button
+                key={h.personId}
+                className={`happy__row ${h.personId === selected ? 'happy__row--on' : ''}`}
+                aria-pressed={h.personId === selected}
+                onClick={() => setSelected(h.personId)}
+              >
+                <span
+                  className={`happy__dot happy__dot--${h.status}`}
+                  role="img"
+                  aria-label={h.status}
+                />
+                <span className="happy__body">
+                  <span className="happy__name">{h.name}</span>
+                  <span className="happy__line">{h.headline}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="chips" style={{ marginBottom: 20 }}>
           {ctx.household.people.map((p) => (
