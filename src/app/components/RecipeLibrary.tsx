@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { allRecipes, isUserRecipe } from '../../core/data/registry.js';
+import type { Recipe } from '../../core/types.js';
+import { RecipeDetail } from './RecipeDetail.js';
 
 /**
  * Browsing the recipe book.
@@ -16,6 +18,7 @@ import { allRecipes, isUserRecipe } from '../../core/data/registry.js';
  */
 export function RecipeLibrary() {
   const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<Recipe | null>(null);
   const total = allRecipes().length;
 
   const results = useMemo(() => {
@@ -52,7 +55,12 @@ export function RecipeLibrary() {
 
       <div className="lib">
         {results.map((r) => (
-          <div className="lib__card" key={r.id}>
+          <button
+            className="lib__card"
+            key={r.id}
+            onClick={() => setSelected(r)}
+            aria-label={`See ${r.name}`}
+          >
             <div className="lib__head">
               <p className="lib__name">{r.name}</p>
               {isUserRecipe(r.id) && <span className="lib__mine">Yours</span>}
@@ -69,12 +77,14 @@ export function RecipeLibrary() {
                 ))}
               </div>
             )}
-          </div>
+          </button>
         ))}
         {results.length === 0 && (
           <p className="cook__nomethod">No dishes match "{query.trim()}".</p>
         )}
       </div>
+
+      {selected && <RecipeDetail recipe={selected} onClose={() => setSelected(null)} />}
     </section>
   );
 }

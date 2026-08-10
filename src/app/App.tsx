@@ -890,6 +890,7 @@ export default function App() {
               household={household}
               onCook={setReading}
               onGoToWeek={() => setMealsView('week')}
+              onQuickPlan={() => plan(Date.now() % 100000)}
               verdictOf={verdictOf}
               onRate={rateMeal}
             />

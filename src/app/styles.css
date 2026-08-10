@@ -1004,11 +1004,44 @@ select:focus-visible {
 }
 
 .lib__card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   padding: calc(var(--step) * 3.5);
   box-shadow: var(--shadow-sm);
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
+}
+
+@media (hover: hover) {
+  .lib__card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+  }
+}
+
+/* Read-only rows in the recipe-detail view reuse the cook sheet's look but
+   aren't buttons — no pointer, no press feedback. */
+.cook__ingredient--static,
+.cook__step--static {
+  cursor: default;
+  width: 100%;
+}
+
+/* Empty-state actions (e.g. Today with no plan) sit in a centred row. */
+.empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(var(--step) * 2);
+  margin-top: calc(var(--step) * 5);
 }
 
 .lib__head {
@@ -1721,15 +1754,25 @@ select {
 .cook__facts {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(var(--step) * 4);
+  gap: calc(var(--step) * 2);
   padding: calc(var(--step) * 3) 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
   font-family: var(--data);
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-dim);
+}
+
+/* Each fact reads as a small pill — scannable at a glance, and it lifts the
+   cook sheet from a plain row to something that feels considered. */
+.cook__facts span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
 }
 
 .cook__facts strong {

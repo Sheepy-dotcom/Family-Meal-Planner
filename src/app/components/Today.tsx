@@ -9,6 +9,8 @@ interface Props {
   onCook: (meal: PlannedMeal) => void;
   /** Jump to the Week tab — the way out of every empty state. */
   onGoToWeek: () => void;
+  /** Plan the week in one tap, straight from here — for the impatient. */
+  onQuickPlan?: () => void;
   /** Current verdict for a person on a dish, so a rating reads its state. */
   verdictOf: (recipeId: string, personId: string) => Verdict | undefined;
   /** Record a per-person verdict the moment it's tapped. */
@@ -33,7 +35,7 @@ interface Props {
  * follow, and anything that has to happen tonight for tomorrow sits in a note
  * beneath.
  */
-export function Today({ plan, household, onCook, onGoToWeek, verdictOf, onRate, now = new Date() }: Props) {
+export function Today({ plan, household, onCook, onGoToWeek, onQuickPlan, verdictOf, onRate, now = new Date() }: Props) {
   const view = buildToday(plan, household, now);
 
   // A rating appears only once a slot has passed — the moment an opinion exists.
@@ -56,11 +58,18 @@ export function Today({ plan, household, onCook, onGoToWeek, verdictOf, onRate, 
             {view.status === 'no-plan' ? 'No plan yet' : 'Nothing on for today'}
           </h2>
           <p>{EMPTY_COPY[view.status]}</p>
-          <p className="empty__aside">
+          <div className="empty__actions">
+            {/* No plan yet? Make one from here — the impatient path. Otherwise
+                the way out is the week itself. */}
+            {view.status === 'no-plan' && onQuickPlan && (
+              <button className="btn btn--primary btn--big" onClick={onQuickPlan}>
+                Plan my week
+              </button>
+            )}
             <button className="btn" onClick={onGoToWeek}>
               Open the week
             </button>
-          </p>
+          </div>
         </div>
       </section>
     );
