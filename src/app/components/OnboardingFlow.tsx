@@ -29,8 +29,15 @@ interface Props {
  * know it's going to be held to.
  */
 export function OnboardingFlow({ onFinish, onUseSample }: Props) {
+  // A welcome screen before the questions: the first thing someone sees should
+  // be an invitation and a sense of how short this is, not "Step 1 of 5" with a
+  // validation error already showing.
+  const [intro, setIntro] = useState(true);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>(DEFAULT_ANSWERS);
+  // Guidance on the people step waits until someone has actually started, so a
+  // blank first screen doesn't greet them in red.
+  const [touched, setTouched] = useState(false);
 
   const question = QUESTIONS[step];
   const isLast = step === QUESTIONS.length - 1;
@@ -41,6 +48,7 @@ export function OnboardingFlow({ onFinish, onUseSample }: Props) {
   }
 
   function setPerson(index: number, next: Partial<{ name: string; ageBand: Person['ageBand'] }>) {
+    setTouched(true);
     patch({
       people: answers.people.map((p, i) => (i === index ? { ...p, ...next } : p)),
     });
@@ -73,6 +81,30 @@ export function OnboardingFlow({ onFinish, onUseSample }: Props) {
   function finish() {
     if (!validation.ok) return;
     onFinish(buildHousehold(answers), answers.lean);
+  }
+
+  if (intro) {
+    return (
+      <div className="onboarding onboarding--welcome">
+        <div className="welcome">
+          <p className="eyebrow">Family meal planner</p>
+          <h1 className="onboarding__prompt">A week of meals, sorted.</h1>
+          <p className="onboarding__why">
+            Answer five quick questions and you'll get a full week of dinners that fit
+            who's eating, what they avoid, and how much time you've actually got — with
+            the shopping list built for you. It takes about a minute.
+          </p>
+          <div className="welcome__foot">
+            <button className="btn btn--primary btn--big" onClick={() => setIntro(false)}>
+              Get started
+            </button>
+            <button className="btn btn--ghost" onClick={onUseSample}>
+              Look round with sample data first
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -136,7 +168,7 @@ export function OnboardingFlow({ onFinish, onUseSample }: Props) {
             >
               Add someone
             </button>
-            {validation.problems.length > 0 && (
+            {touched && validation.problems.length > 0 && (
               <p className="onboarding__problem">{validation.problems[0]}</p>
             )}
           </>

@@ -1417,6 +1417,36 @@ select {
   padding: calc(var(--step) * 10) 0;
 }
 
+/* --- welcome screen ------------------------------------------------------ */
+/* The first impression: centred, unhurried, a clear way in and a low-commitment
+   way to look around first. */
+.onboarding--welcome {
+  min-height: 82vh;
+  display: flex;
+  align-items: center;
+}
+
+.welcome {
+  width: 100%;
+}
+
+.welcome .onboarding__prompt {
+  font-size: clamp(38px, 9vw, 56px);
+}
+
+.welcome__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--step) * 3);
+  margin-top: calc(var(--step) * 8);
+}
+
+.btn--big {
+  font-size: 15px;
+  padding: calc(var(--step) * 3.5) calc(var(--step) * 7);
+}
+
 .onboarding__progress {
   display: flex;
   gap: calc(var(--step) * 1.5);
